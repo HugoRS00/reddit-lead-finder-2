@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reddit Lead Finder - TradingWizard.ai</title>
+    <title>Reddit Lead Finder v2.0</title>
     <style>
         * {
             margin: 0;
@@ -25,273 +25,393 @@
 
         .header {
             background: white;
-            border-radius: 16px;
             padding: 30px;
-            margin-bottom: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
         }
 
-        .header h1 {
+        h1 {
             color: #667eea;
-            font-size: 32px;
             margin-bottom: 10px;
         }
 
-        .header p {
+        .subtitle {
             color: #666;
-            font-size: 16px;
+            font-size: 14px;
         }
 
         .controls {
             background: white;
-            border-radius: 16px;
-            padding: 30px;
-            margin-bottom: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
         }
 
-        .control-group {
-            margin-bottom: 20px;
-        }
-
-        .control-group label {
-            display: block;
-            margin-bottom: 8px;
-            color: #333;
+        .section-title {
+            font-size: 16px;
             font-weight: 600;
-            font-size: 14px;
-        }
-
-        .keyword-tags {
+            color: #333;
+            margin-bottom: 15px;
             display: flex;
-            flex-wrap: wrap;
+            align-items: center;
             gap: 8px;
-            margin-bottom: 10px;
         }
 
-        .keyword-tag {
-            background: #f0f4ff;
-            color: #667eea;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.2s;
-            border: 2px solid transparent;
-        }
-
-        .keyword-tag.active {
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 20px;
             background: #667eea;
-            color: white;
+            border-radius: 2px;
+        }
+
+        /* Custom Keywords Input */
+        .custom-keywords {
+            margin-bottom: 25px;
+        }
+
+        .keyword-input-wrapper {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .keyword-input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .keyword-input:focus {
+            outline: none;
             border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
 
-        .keyword-tag:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-        }
-
-        .btn {
+        .add-keyword-btn {
+            padding: 12px 24px;
             background: #667eea;
             color: white;
             border: none;
-            padding: 14px 32px;
             border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+
+        .add-keyword-btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+
+        .helper-text {
+            font-size: 12px;
+            color: #999;
+            margin-top: 5px;
+        }
+
+        /* Keyword Toggle Grid */
+        .keyword-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        .keyword-toggle {
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            background: #f8f9fa;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+            font-weight: 500;
+            color: #666;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        .keyword-toggle::before {
+            content: '○';
+            font-size: 20px;
+            color: #ccc;
+            margin-right: 10px;
+        }
+
+        .keyword-toggle.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-color: #667eea;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .keyword-toggle.active::before {
+            content: '●';
+            color: white;
+        }
+
+        .keyword-toggle.custom {
+            border-style: dashed;
+        }
+
+        .keyword-toggle.custom.active {
+            border-style: solid;
+        }
+
+        .remove-keyword {
+            opacity: 0;
+            transition: opacity 0.3s;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .keyword-toggle.custom:hover .remove-keyword,
+        .keyword-toggle.custom.active .remove-keyword {
+            opacity: 1;
+        }
+
+        /* Other Controls */
+        .date-range {
+            margin: 20px 0;
+        }
+
+        .date-range label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .date-range select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .checkbox-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .checkbox-wrapper input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .scan-btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
             font-size: 16px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            transition: all 0.3s;
         }
 
-        .btn:hover {
-            background: #5568d3;
+        .scan-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
         }
 
-        .btn:disabled {
+        .scan-btn:disabled {
             background: #ccc;
             cursor: not-allowed;
             transform: none;
         }
 
-        .btn-sm {
-            padding: 8px 16px;
-            font-size: 14px;
-        }
-
-        .btn-secondary {
-            background: #10b981;
-        }
-
-        .btn-secondary:hover {
-            background: #059669;
-        }
-
-        .results-section {
+        /* Results */
+        .results {
             background: white;
-            border-radius: 16px;
-            padding: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
         }
 
         .stats {
             display: flex;
             gap: 20px;
             margin-bottom: 20px;
-            padding: 20px;
-            background: #f8fafc;
-            border-radius: 12px;
+            flex-wrap: wrap;
         }
 
-        .stat {
+        .stat-card {
             flex: 1;
+            min-width: 150px;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
             text-align: center;
         }
 
         .stat-value {
             font-size: 32px;
-            font-weight: bold;
-            color: #667eea;
+            font-weight: 700;
+            margin-bottom: 5px;
         }
 
         .stat-label {
-            font-size: 14px;
-            color: #666;
-            margin-top: 4px;
-        }
-
-        .lead-card {
-            border: 2px solid #e5e7eb;
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 16px;
-            transition: all 0.2s;
-        }
-
-        .lead-card:hover {
-            border-color: #667eea;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
-        }
-
-        .lead-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: start;
-            margin-bottom: 12px;
-        }
-
-        .lead-title {
-            flex: 1;
-            margin-right: 20px;
-        }
-
-        .lead-title h3 {
-            font-size: 18px;
-            color: #1f2937;
-            margin-bottom: 6px;
-        }
-
-        .lead-meta {
-            display: flex;
-            gap: 12px;
-            font-size: 13px;
-            color: #6b7280;
-        }
-
-        .lead-score {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 12px 16px;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            border-radius: 12px;
-            color: white;
-            min-width: 80px;
-        }
-
-        .score-value {
-            font-size: 28px;
-            font-weight: bold;
-        }
-
-        .score-label {
-            font-size: 11px;
+            font-size: 12px;
             opacity: 0.9;
         }
 
-        .lead-content {
-            padding: 16px;
-            background: #f9fafb;
-            border-radius: 8px;
-            margin-bottom: 12px;
-            font-size: 14px;
-            line-height: 1.6;
-            color: #374151;
+        .result-item {
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s;
         }
 
-        .lead-tags {
+        .result-item:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+
+        .result-header {
             display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-bottom: 16px;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
         }
 
-        .tag {
+        .result-type {
+            display: inline-block;
             padding: 4px 12px;
-            border-radius: 12px;
+            background: #667eea;
+            color: white;
+            border-radius: 20px;
             font-size: 12px;
-            font-weight: 500;
+            font-weight: 600;
         }
 
-        .tag-intent {
-            background: #dbeafe;
-            color: #1e40af;
-        }
-
-        .tag-type {
-            background: #fef3c7;
-            color: #92400e;
-        }
-
-        .tag-subreddit {
-            background: #e0e7ff;
-            color: #3730a3;
-        }
-
-        .tag-risk {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-
-        .lead-actions {
-            display: flex;
-            gap: 12px;
-        }
-
-        .reply-section {
-            margin-top: 16px;
-            padding: 16px;
-            background: #f0f9ff;
-            border-radius: 8px;
-            border: 2px solid #bfdbfe;
-        }
-
-        .reply-text {
-            background: white;
-            padding: 16px;
-            border-radius: 8px;
-            margin-bottom: 12px;
-            line-height: 1.6;
+        .result-score {
             font-size: 14px;
-            color: #1f2937;
+            font-weight: 600;
+            padding: 4px 12px;
+            border-radius: 20px;
+        }
+
+        .score-high { background: #4caf50; color: white; }
+        .score-medium { background: #ff9800; color: white; }
+        .score-low { background: #f44336; color: white; }
+
+        .result-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .result-body {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .result-meta {
+            display: flex;
+            gap: 15px;
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 15px;
+        }
+
+        .result-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .ai-reply {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .ai-reply.show {
+            display: block;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .ai-reply-text {
+            color: #333;
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 10px;
         }
 
         .loading {
             text-align: center;
             padding: 40px;
-            color: #666;
+            color: #999;
         }
 
         .spinner {
@@ -301,7 +421,7 @@
             width: 40px;
             height: 40px;
             animation: spin 1s linear infinite;
-            margin: 0 auto 16px;
+            margin: 0 auto 15px;
         }
 
         @keyframes spin {
@@ -312,334 +432,352 @@
         .empty-state {
             text-align: center;
             padding: 60px 20px;
-            color: #9ca3af;
+            color: #999;
         }
 
-        .empty-state svg {
-            width: 64px;
-            height: 64px;
-            margin-bottom: 16px;
-            opacity: 0.5;
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
         }
 
-        .toast {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: #10b981;
-            color: white;
-            padding: 16px 24px;
-            border-radius: 8px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            display: none;
-            animation: slideIn 0.3s ease-out;
-        }
-
-        @keyframes slideIn {
-            from {
-                transform: translateX(400px);
-                opacity: 0;
+        @media (max-width: 768px) {
+            .keyword-grid {
+                grid-template-columns: 1fr;
             }
-            to {
-                transform: translateX(0);
-                opacity: 1;
+            
+            .stats {
+                flex-direction: column;
             }
-        }
-
-        .keywords-input {
-            width: 100%;
-            padding: 10px;
-            border: 2px solid #e5e7eb;
-            border-radius: 8px;
-            font-size: 14px;
-        }
-
-        .flex-row {
-            display: flex;
-            gap: 16px;
-            align-items: center;
-        }
-
-        .checkbox-label {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            font-weight: normal;
         }
     </style>
 </head>
 <body>
     <div class="container">
+        <!-- Header -->
         <div class="header">
-            <h1>🎯 Reddit Lead Finder</h1>
-            <p>Find and engage with trading communities on Reddit | TradingWizard.ai</p>
+            <h1>🎯 Reddit Lead Finder v2.0</h1>
+            <p class="subtitle">Find and engage with trading opportunities on Reddit</p>
         </div>
 
+        <!-- Controls -->
         <div class="controls">
-            <div class="control-group">
-                <label>Select Keywords (click to toggle):</label>
-                <div id="keywordTags" class="keyword-tags"></div>
+            <!-- Custom Keywords -->
+            <div class="custom-keywords">
+                <div class="section-title">Add Custom Keywords</div>
+                <div class="keyword-input-wrapper">
+                    <input 
+                        type="text" 
+                        id="customKeywordInput" 
+                        class="keyword-input" 
+                        placeholder="Enter a custom keyword (e.g., 'pattern recognition', 'algo trading')"
+                    >
+                    <button class="add-keyword-btn" onclick="addCustomKeyword()">+ Add</button>
+                </div>
+                <div class="helper-text">Add specific keywords you want to search for. Press Enter or click Add.</div>
             </div>
 
-            <div class="control-group">
-                <label>Date Range (days):</label>
-                <input type="number" id="dateRange" value="7" min="1" max="30" class="keywords-input" style="width: 200px;">
+            <!-- Default Keywords -->
+            <div class="section-title">Select Keywords (Click to toggle)</div>
+            <div class="keyword-grid" id="keywordGrid"></div>
+
+            <!-- Date Range -->
+            <div class="date-range">
+                <label>Search Date Range:</label>
+                <select id="dateRange">
+                    <option value="1">Last 24 hours</option>
+                    <option value="3">Last 3 days</option>
+                    <option value="7" selected>Last 7 days</option>
+                    <option value="14">Last 14 days</option>
+                    <option value="30">Last 30 days</option>
+                </select>
             </div>
 
-            <div class="control-group">
-                <label class="checkbox-label">
-                    <input type="checkbox" id="searchComments" checked>
-                    <span>Search comments (in addition to posts)</span>
-                </label>
+            <!-- Search Comments -->
+            <div class="checkbox-wrapper">
+                <input type="checkbox" id="searchComments" checked>
+                <label for="searchComments">Also search comments (2x more opportunities)</label>
             </div>
 
-            <button id="scanBtn" class="btn" onclick="startScan()">
-                🔍 Start Scan
+            <!-- Scan Button -->
+            <button class="scan-btn" onclick="scanReddit()" id="scanBtn">
+                🔍 Start Scanning
             </button>
         </div>
 
-        <div class="results-section">
-            <div id="stats" class="stats" style="display: none;">
-                <div class="stat">
-                    <div class="stat-value" id="totalCount">0</div>
-                    <div class="stat-label">Total Leads</div>
-                </div>
-                <div class="stat">
-                    <div class="stat-value" id="postsCount">0</div>
-                    <div class="stat-label">Posts</div>
-                </div>
-                <div class="stat">
-                    <div class="stat-value" id="commentsCount">0</div>
-                    <div class="stat-label">Comments</div>
-                </div>
-                <div class="stat">
-                    <div class="stat-value" id="avgScore">0</div>
-                    <div class="stat-label">Avg Score</div>
-                </div>
-            </div>
-
-            <div id="results"></div>
+        <!-- Results -->
+        <div class="results" id="results" style="display: none;">
+            <div class="section-title">Results</div>
+            <div class="stats" id="stats"></div>
+            <div id="resultsList"></div>
         </div>
     </div>
 
-    <div id="toast" class="toast"></div>
-
     <script>
-        let selectedKeywords = [];
-        let defaultKeywords = [];
-        let currentResults = [];
+        let selectedKeywords = new Set();
+        let customKeywords = [];
 
         // Load default keywords on page load
         async function loadDefaultKeywords() {
             try {
                 const response = await fetch('/api/default-keywords');
                 const data = await response.json();
-                defaultKeywords = data.keywords;
-                selectedKeywords = [...defaultKeywords]; // All selected by default
-                renderKeywordTags();
+                const keywords = data.keywords || [];
+                
+                const grid = document.getElementById('keywordGrid');
+                grid.innerHTML = '';
+                
+                keywords.forEach(keyword => {
+                    const div = document.createElement('div');
+                    div.className = 'keyword-toggle active';
+                    div.textContent = keyword;
+                    div.onclick = () => toggleKeyword(keyword, div);
+                    grid.appendChild(div);
+                    selectedKeywords.add(keyword);
+                });
             } catch (error) {
                 console.error('Error loading keywords:', error);
             }
         }
 
-        function renderKeywordTags() {
-            const container = document.getElementById('keywordTags');
-            container.innerHTML = defaultKeywords.map(keyword => `
-                <div class="keyword-tag ${selectedKeywords.includes(keyword) ? 'active' : ''}" 
-                     onclick="toggleKeyword('${keyword}')">
-                    ${keyword}
-                </div>
-            `).join('');
-        }
-
-        function toggleKeyword(keyword) {
-            if (selectedKeywords.includes(keyword)) {
-                selectedKeywords = selectedKeywords.filter(k => k !== keyword);
+        function toggleKeyword(keyword, element) {
+            if (selectedKeywords.has(keyword)) {
+                selectedKeywords.delete(keyword);
+                element.classList.remove('active');
             } else {
-                selectedKeywords.push(keyword);
+                selectedKeywords.add(keyword);
+                element.classList.add('active');
             }
-            renderKeywordTags();
         }
 
-        async function startScan() {
+        function addCustomKeyword() {
+            const input = document.getElementById('customKeywordInput');
+            const keyword = input.value.trim();
+            
+            if (!keyword) return;
+            
+            if (selectedKeywords.has(keyword)) {
+                alert('This keyword already exists!');
+                return;
+            }
+            
+            const grid = document.getElementById('keywordGrid');
+            const div = document.createElement('div');
+            div.className = 'keyword-toggle custom active';
+            div.innerHTML = `${keyword} <span class="remove-keyword" onclick="removeKeyword('${keyword}', this)">✕</span>`;
+            div.onclick = (e) => {
+                if (!e.target.classList.contains('remove-keyword')) {
+                    toggleKeyword(keyword, div);
+                }
+            };
+            
+            grid.appendChild(div);
+            selectedKeywords.add(keyword);
+            customKeywords.push(keyword);
+            input.value = '';
+        }
+
+        function removeKeyword(keyword, element) {
+            event.stopPropagation();
+            selectedKeywords.delete(keyword);
+            customKeywords = customKeywords.filter(k => k !== keyword);
+            element.parentElement.remove();
+        }
+
+        // Allow Enter key to add keyword
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('customKeywordInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') addCustomKeyword();
+            });
+        });
+
+        async function scanReddit() {
             const btn = document.getElementById('scanBtn');
-            const resultsDiv = document.getElementById('results');
-            const statsDiv = document.getElementById('stats');
+            const results = document.getElementById('results');
+            const resultsList = document.getElementById('resultsList');
+            const stats = document.getElementById('stats');
             
             btn.disabled = true;
-            btn.textContent = '⏳ Scanning...';
+            btn.textContent = '🔍 Scanning...';
             
-            resultsDiv.innerHTML = `
-                <div class="loading">
-                    <div class="spinner"></div>
-                    <p>Searching Reddit for opportunities...</p>
-                </div>
-            `;
-            statsDiv.style.display = 'none';
-
+            results.style.display = 'block';
+            resultsList.innerHTML = '<div class="loading"><div class="spinner"></div>Scanning Reddit...</div>';
+            stats.innerHTML = '';
+            
             try {
                 const response = await fetch('/api/scan', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        keywords: selectedKeywords,
+                        keywords: Array.from(selectedKeywords),
                         date_range: parseInt(document.getElementById('dateRange').value),
                         search_comments: document.getElementById('searchComments').checked
                     })
                 });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayResults(data.results);
+                } else {
+                    resultsList.innerHTML = `<div class="empty-state">❌ Error: ${data.error}</div>`;
+                }
+            } catch (error) {
+                resultsList.innerHTML = `<div class="empty-state">❌ Error: ${error.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔍 Start Scanning';
+            }
+        }
 
+        function displayResults(results) {
+            const resultsList = document.getElementById('resultsList');
+            const stats = document.getElementById('stats');
+            
+            if (results.length === 0) {
+                resultsList.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><h3>No results found</h3><p>Try adjusting your keywords or date range</p></div>';
+                return;
+            }
+            
+            // Calculate stats
+            const posts = results.filter(r => r.type === 'post').length;
+            const comments = results.filter(r => r.type === 'comment').length;
+            const avgScore = Math.round(results.reduce((sum, r) => sum + r.score, 0) / results.length);
+            
+            stats.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-value">${results.length}</div>
+                    <div class="stat-label">Total Leads</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${posts}</div>
+                    <div class="stat-label">Posts</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${comments}</div>
+                    <div class="stat-label">Comments</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${avgScore}</div>
+                    <div class="stat-label">Avg Score</div>
+                </div>
+            `;
+            
+            resultsList.innerHTML = results.map((result, index) => {
+                const scoreClass = result.score >= 10 ? 'score-high' : result.score >= 5 ? 'score-medium' : 'score-low';
+                return `
+                    <div class="result-item">
+                        <div class="result-header">
+                            <span class="result-type">${result.type.toUpperCase()}</span>
+                            <span class="result-score ${scoreClass}">↑ ${result.score}</span>
+                        </div>
+                        <div class="result-title">${result.title || 'Comment in: ' + result.subreddit}</div>
+                        <div class="result-body">${result.body.substring(0, 300)}${result.body.length > 300 ? '...' : ''}</div>
+                        <div class="result-meta">
+                            <span>📍 r/${result.subreddit}</span>
+                            <span>⏰ ${result.created_utc}</span>
+                            <span>🏷️ ${result.intent_label}</span>
+                        </div>
+                        <div class="result-actions">
+                            <button class="btn btn-primary" onclick="generateReply(${index})">
+                                🤖 Generate AI Reply
+                            </button>
+                            <button class="btn btn-secondary" onclick="window.open('${result.url}', '_blank')">
+                                🔗 Open Reddit
+                            </button>
+                        </div>
+                        <div class="ai-reply" id="reply-${index}">
+                            <div class="ai-reply-text" id="reply-text-${index}"></div>
+                            <button class="btn btn-secondary" onclick="copyReply(${index})">
+                                📋 Copy Reply
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        let currentResults = [];
+
+        async function scanReddit() {
+            const btn = document.getElementById('scanBtn');
+            const results = document.getElementById('results');
+            const resultsList = document.getElementById('resultsList');
+            const stats = document.getElementById('stats');
+            
+            btn.disabled = true;
+            btn.textContent = '🔍 Scanning...';
+            
+            results.style.display = 'block';
+            resultsList.innerHTML = '<div class="loading"><div class="spinner"></div>Scanning Reddit...</div>';
+            stats.innerHTML = '';
+            
+            try {
+                const response = await fetch('/api/scan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        keywords: Array.from(selectedKeywords),
+                        date_range: parseInt(document.getElementById('dateRange').value),
+                        search_comments: document.getElementById('searchComments').checked
+                    })
+                });
+                
                 const data = await response.json();
                 
                 if (data.success) {
                     currentResults = data.results;
                     displayResults(data.results);
-                    showToast(`✅ Found ${data.count} opportunities!`);
                 } else {
-                    resultsDiv.innerHTML = `
-                        <div class="empty-state">
-                            <p>❌ Error: ${data.error}</p>
-                        </div>
-                    `;
+                    resultsList.innerHTML = `<div class="empty-state">❌ Error: ${data.error}</div>`;
                 }
             } catch (error) {
-                resultsDiv.innerHTML = `
-                    <div class="empty-state">
-                        <p>❌ Error: ${error.message}</p>
-                    </div>
-                `;
+                resultsList.innerHTML = `<div class="empty-state">❌ Error: ${error.message}</div>`;
             } finally {
                 btn.disabled = false;
-                btn.textContent = '🔍 Start Scan';
+                btn.textContent = '🔍 Start Scanning';
             }
-        }
-
-        function displayResults(results) {
-            const resultsDiv = document.getElementById('results');
-            const statsDiv = document.getElementById('stats');
-            
-            if (results.length === 0) {
-                resultsDiv.innerHTML = `
-                    <div class="empty-state">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                        <h3>No results found</h3>
-                        <p>Try adjusting your keywords or date range</p>
-                    </div>
-                `;
-                statsDiv.style.display = 'none';
-                return;
-            }
-
-            // Update stats
-            const posts = results.filter(r => r.type === 'post').length;
-            const comments = results.filter(r => r.type === 'comment').length;
-            const avgScore = Math.round(results.reduce((sum, r) => sum + r.relevance_score, 0) / results.length);
-            
-            document.getElementById('totalCount').textContent = results.length;
-            document.getElementById('postsCount').textContent = posts;
-            document.getElementById('commentsCount').textContent = comments;
-            document.getElementById('avgScore').textContent = avgScore;
-            statsDiv.style.display = 'flex';
-
-            // Render results
-            resultsDiv.innerHTML = results.map((lead, index) => `
-                <div class="lead-card">
-                    <div class="lead-header">
-                        <div class="lead-title">
-                            <h3>${lead.title}</h3>
-                            <div class="lead-meta">
-                                <span>👤 ${lead.author}</span>
-                                <span>📍 ${lead.subreddit}</span>
-                                <span>⬆️ ${lead.upvotes} upvotes</span>
-                                <span>⏰ ${new Date(lead.created_utc).toLocaleDateString()}</span>
-                            </div>
-                        </div>
-                        <div class="lead-score">
-                            <div class="score-value">${lead.relevance_score}</div>
-                            <div class="score-label">Score</div>
-                        </div>
-                    </div>
-
-                    <div class="lead-content">
-                        ${lead.content}
-                    </div>
-
-                    <div class="lead-tags">
-                        <span class="tag tag-intent">🎯 ${lead.intent_label}</span>
-                        <span class="tag tag-type">📝 ${lead.type}</span>
-                        <span class="tag tag-subreddit">${lead.subreddit}</span>
-                        ${lead.risk_flags.map(risk => `<span class="tag tag-risk">⚠️ ${risk}</span>`).join('')}
-                    </div>
-
-                    <div class="lead-actions">
-                        <a href="${lead.url}" target="_blank" class="btn btn-sm">🔗 Open in Reddit</a>
-                        <button class="btn btn-sm btn-secondary" onclick="generateReply(${index})">
-                            ✨ Generate AI Reply
-                        </button>
-                    </div>
-
-                    <div id="reply-${index}" class="reply-section" style="display: none;">
-                        <div class="reply-text" id="reply-text-${index}"></div>
-                        <button class="btn btn-sm" onclick="copyReply(${index})">📋 Copy Reply</button>
-                    </div>
-                </div>
-            `).join('');
         }
 
         async function generateReply(index) {
-            const lead = currentResults[index];
-            const replySection = document.getElementById(`reply-${index}`);
+            const result = currentResults[index];
+            const replyDiv = document.getElementById(`reply-${index}`);
             const replyText = document.getElementById(`reply-text-${index}`);
             
-            replySection.style.display = 'block';
             replyText.innerHTML = '<div class="loading"><div class="spinner"></div>Generating AI reply...</div>';
-
+            replyDiv.classList.add('show');
+            
             try {
                 const response = await fetch('/api/generate-reply', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        context: lead.context,
-                        intent_label: lead.intent_label,
-                        include_link: lead.include_link,
-                        type: lead.type
+                        context: result.body,
+                        intent_label: result.intent_label,
+                        include_link: true,
+                        type: result.type
                     })
                 });
-
+                
                 const data = await response.json();
                 
                 if (data.success) {
-                    replyText.textContent = data.reply;
-                    showToast('✨ Reply generated!');
+                    const methodBadge = data.method === 'ai' ? '✨ AI Generated' : '📝 Template';
+                    replyText.innerHTML = `<div style="font-size: 11px; color: #999; margin-bottom: 8px;">${methodBadge}</div>${data.reply}`;
                 } else {
-                    replyText.textContent = 'Error generating reply: ' + data.error;
+                    replyText.innerHTML = `❌ Error: ${data.error}`;
                 }
             } catch (error) {
-                replyText.textContent = 'Error: ' + error.message;
+                replyText.innerHTML = `❌ Error: ${error.message}`;
             }
         }
 
         function copyReply(index) {
-            const replyText = document.getElementById(`reply-text-${index}`).textContent;
-            navigator.clipboard.writeText(replyText).then(() => {
-                showToast('📋 Copied to clipboard!');
-            }).catch(err => {
-                showToast('❌ Failed to copy');
-            });
+            const replyText = document.getElementById(`reply-text-${index}`).innerText;
+            navigator.clipboard.writeText(replyText);
+            alert('✅ Reply copied to clipboard!');
         }
 
-        function showToast(message) {
-            const toast = document.getElementById('toast');
-            toast.textContent = message;
-            toast.style.display = 'block';
-            setTimeout(() => {
-                toast.style.display = 'none';
-            }, 3000);
-        }
-
-        // Initialize
+        // Load keywords on page load
         loadDefaultKeywords();
     </script>
 </body>
