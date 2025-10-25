@@ -142,11 +142,14 @@ Write a natural, helpful reply that:
 5. {"Includes a casual disclosure like '(full disclosure: I work on it)' or '(I help build it)'" if include_link else "No disclosure needed"}
 6. Keep it 4-6 sentences total
 7. NO generic advice - everything must be relevant to their specific post content
+8. IMPORTANT: Use regular dashes (-) not em dashes (—)
 
 Make it sound natural and helpful, not salesy or corporate. Write like you're genuinely trying to help a fellow trader."""
 
         try:
             print(f"🚀 Sending request to Anthropic API...")
+            print(f"📊 API Key present: {bool(os.getenv('ANTHROPIC_API_KEY'))}")
+            
             message = client.messages.create(
                 model="claude-sonnet-4-20250514",
                 max_tokens=400,
@@ -167,6 +170,8 @@ Make it sound natural and helpful, not salesy or corporate. Write like you're ge
             
         except Exception as ai_error:
             print(f"❌ AI generation failed: {ai_error}")
+            print(f"❌ Error type: {type(ai_error).__name__}")
+            print(f"❌ Full error: {str(ai_error)}")
             reply = generate_template_reply(context, intent_label, include_link)
             return jsonify({
                 'success': True,
@@ -204,7 +209,7 @@ def generate_template_reply(context: str, intent_label: str, include_link: bool)
     tip = tips.get(intent_label, tips['General discussion'])
     
     if include_link:
-        cta = " If you want AI-powered analysis for any chart, TradingWizard.ai lets you analyze stocks, crypto, or forex by just selecting the symbol—instant technical breakdown. (Disclosure: I help build it)"
+        cta = " If you want AI-powered analysis for any chart, TradingWizard.ai lets you analyze stocks, crypto, or forex by just selecting the symbol - instant technical breakdown. (Disclosure: I help build it)"
     else:
         cta = " Tools that automate chart reading and setup identification can speed this up significantly."
     
