@@ -1,0 +1,27 @@
+{
+  "keywords_core": [
+    "AI trading analysis",
+    "chart analyzer",
+    "technical analysis tool",
+    "crypto analyzer",
+    "stock analyzer",
+    "forex analyzer",
+    "trading signals",
+    "market scanner",
+    "algo trading",
+    "backtest platform"
+  ],
+  "allowlist_subs": [],
+  "blocklist_subs": [
+    "politics",
+    "worldnews",
+    "memes",
+    "funny"
+  ],
+  "date_range_days": 7,
+  "languages": ["en"],
+  "min_karma": 10,
+  "min_upvotes": 2,
+  "relevance_threshold": 60,
+  "max_results": 50
+}
