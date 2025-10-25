@@ -3,31 +3,46 @@ Flask Web Application for Reddit Lead Finder
 """
 
 from flask import Flask, render_template, jsonify, request
+from dotenv import load_dotenv
 from main import RedditLeadFinder
 import json
 import os
-from anthropic import Anthropic
+
+# Load environment variables
+load_dotenv()
 
 app = Flask(__name__)
 
-# Initialize clients
+# Global variable for lead finder instance
 lead_finder = None
-anthropic_client = Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY', ''))
+
+def get_anthropic_client():
+    """Initialize Anthropic client lazily only when needed."""
+    try:
+        from anthropic import Anthropic
+        api_key = os.getenv('ANTHROPIC_API_KEY', '')
+        if api_key:
+            return Anthropic(api_key=api_key)
+    except Exception as e:
+        print(f"Failed to initialize Anthropic client: {e}")
+    return None
 
 def get_lead_finder():
+    """Get or create RedditLeadFinder instance."""
     global lead_finder
     if lead_finder is None:
         lead_finder = RedditLeadFinder()
     return lead_finder
 
-@app.route('/')
+@app.route('/') 
 def index():
     """Render the main page."""
     return render_template('index.html')
 
 @app.route('/health')
 def health():
-    return {'status': 'healthy'}, 200
+    """Health check endpoint for Railway."""
+    return jsonify({'status': 'healthy'}), 200
 
 @app.route('/api/scan', methods=['POST'])
 def scan_reddit():
@@ -76,9 +91,11 @@ def generate_reply():
                 'error': 'No context provided'
             }), 400
         
-        # Check if Anthropic API key is set
-        if not os.getenv('ANTHROPIC_API_KEY'):
-            # Fallback to template-based reply
+        # Try to get Anthropic client
+        client = get_anthropic_client()
+        
+        if not client:
+            # Fallback to template-based reply if no API key or client failed
             reply = generate_template_reply(context, intent_label, include_link)
             return jsonify({
                 'success': True,
@@ -111,25 +128,35 @@ Generate a helpful, natural reply that:
 
 Keep it natural, helpful, and not spammy. Focus on being genuinely useful first."""
 
-        message = anthropic_client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=300,
-            messages=[{
-                "role": "user",
-                "content": prompt
-            }]
-        )
-        
-        reply = message.content[0].text
-        
-        return jsonify({
-            'success': True,
-            'reply': reply,
-            'method': 'ai'
-        })
+        try:
+            message = client.messages.create(
+                model="claude-sonnet-4-20250514",
+                max_tokens=300,
+                messages=[{
+                    "role": "user",
+                    "content": prompt
+                }]
+            )
+            
+            reply = message.content[0].text
+            
+            return jsonify({
+                'success': True,
+                'reply': reply,
+                'method': 'ai'
+            })
+        except Exception as ai_error:
+            print(f"AI generation failed: {ai_error}")
+            # Fallback to template on AI error
+            reply = generate_template_reply(context, intent_label, include_link)
+            return jsonify({
+                'success': True,
+                'reply': reply,
+                'method': 'template_fallback'
+            })
     
     except Exception as e:
-        print(f"Error generating AI reply: {e}")
+        print(f"Error in generate_reply: {e}")
         # Fallback to template
         reply = generate_template_reply(
             data.get('context', ''),
@@ -139,7 +166,8 @@ Keep it natural, helpful, and not spammy. Focus on being genuinely useful first.
         return jsonify({
             'success': True,
             'reply': reply,
-            'method': 'template_fallback'
+            'method': 'template_fallback',
+            'error': str(e)
         })
 
 def generate_template_reply(context: str, intent_label: str, include_link: bool) -> str:
@@ -167,11 +195,6 @@ def get_default_keywords():
     return jsonify({
         'keywords': finder.config.get('keywords_core', [])
     })
-
-@app.route('/health', methods=['GET'])
-def health():
-    """Health check endpoint."""
-    return jsonify({'status': 'healthy'})
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
