@@ -67,7 +67,6 @@
             border-radius: 2px;
         }
 
-        /* Custom Keywords Input */
         .custom-keywords {
             margin-bottom: 25px;
         }
@@ -116,7 +115,6 @@
             margin-top: 5px;
         }
 
-        /* Keyword Toggle Grid */
         .keyword-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -181,7 +179,6 @@
             opacity: 1;
         }
 
-        /* Other Controls */
         .date-range {
             margin: 20px 0;
         }
@@ -239,7 +236,6 @@
             transform: none;
         }
 
-        /* Results */
         .results {
             background: white;
             padding: 25px;
@@ -336,11 +332,13 @@
             font-size: 12px;
             color: #999;
             margin-bottom: 15px;
+            flex-wrap: wrap;
         }
 
         .result-actions {
             display: flex;
             gap: 10px;
+            flex-wrap: wrap;
         }
 
         .btn {
@@ -453,15 +451,12 @@
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
         <div class="header">
             <h1>🎯 Reddit Lead Finder v2.0</h1>
             <p class="subtitle">Find and engage with trading opportunities on Reddit</p>
         </div>
 
-        <!-- Controls -->
         <div class="controls">
-            <!-- Custom Keywords -->
             <div class="custom-keywords">
                 <div class="section-title">Add Custom Keywords</div>
                 <div class="keyword-input-wrapper">
@@ -476,11 +471,9 @@
                 <div class="helper-text">Add specific keywords you want to search for. Press Enter or click Add.</div>
             </div>
 
-            <!-- Default Keywords -->
             <div class="section-title">Select Keywords (Click to toggle)</div>
             <div class="keyword-grid" id="keywordGrid"></div>
 
-            <!-- Date Range -->
             <div class="date-range">
                 <label>Search Date Range:</label>
                 <select id="dateRange">
@@ -492,19 +485,16 @@
                 </select>
             </div>
 
-            <!-- Search Comments -->
             <div class="checkbox-wrapper">
                 <input type="checkbox" id="searchComments" checked>
                 <label for="searchComments">Also search comments (2x more opportunities)</label>
             </div>
 
-            <!-- Scan Button -->
             <button class="scan-btn" onclick="scanReddit()" id="scanBtn">
                 🔍 Start Scanning
             </button>
         </div>
 
-        <!-- Results -->
         <div class="results" id="results" style="display: none;">
             <div class="section-title">Results</div>
             <div class="stats" id="stats"></div>
@@ -515,8 +505,8 @@
     <script>
         let selectedKeywords = new Set();
         let customKeywords = [];
+        let currentResults = [];
 
-        // Load default keywords on page load
         async function loadDefaultKeywords() {
             try {
                 const response = await fetch('/api/default-keywords');
@@ -583,120 +573,11 @@
             element.parentElement.remove();
         }
 
-        // Allow Enter key to add keyword
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('customKeywordInput').addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') addCustomKeyword();
             });
         });
-
-        async function scanReddit() {
-            const btn = document.getElementById('scanBtn');
-            const results = document.getElementById('results');
-            const resultsList = document.getElementById('resultsList');
-            const stats = document.getElementById('stats');
-            
-            btn.disabled = true;
-            btn.textContent = '🔍 Scanning...';
-            
-            results.style.display = 'block';
-            resultsList.innerHTML = '<div class="loading"><div class="spinner"></div>Scanning Reddit...</div>';
-            stats.innerHTML = '';
-            
-            try {
-                const response = await fetch('/api/scan', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        keywords: Array.from(selectedKeywords),
-                        date_range: parseInt(document.getElementById('dateRange').value),
-                        search_comments: document.getElementById('searchComments').checked
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    displayResults(data.results);
-                } else {
-                    resultsList.innerHTML = `<div class="empty-state">❌ Error: ${data.error}</div>`;
-                }
-            } catch (error) {
-                resultsList.innerHTML = `<div class="empty-state">❌ Error: ${error.message}</div>`;
-            } finally {
-                btn.disabled = false;
-                btn.textContent = '🔍 Start Scanning';
-            }
-        }
-
-        function displayResults(results) {
-            const resultsList = document.getElementById('resultsList');
-            const stats = document.getElementById('stats');
-            
-            if (results.length === 0) {
-                resultsList.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><h3>No results found</h3><p>Try adjusting your keywords or date range</p></div>';
-                return;
-            }
-            
-            // Calculate stats
-            const posts = results.filter(r => r.type === 'post').length;
-            const comments = results.filter(r => r.type === 'comment').length;
-            const avgScore = Math.round(results.reduce((sum, r) => sum + r.score, 0) / results.length);
-            
-            stats.innerHTML = `
-                <div class="stat-card">
-                    <div class="stat-value">${results.length}</div>
-                    <div class="stat-label">Total Leads</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value">${posts}</div>
-                    <div class="stat-label">Posts</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value">${comments}</div>
-                    <div class="stat-label">Comments</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value">${avgScore}</div>
-                    <div class="stat-label">Avg Score</div>
-                </div>
-            `;
-            
-            resultsList.innerHTML = results.map((result, index) => {
-                const scoreClass = result.score >= 10 ? 'score-high' : result.score >= 5 ? 'score-medium' : 'score-low';
-                return `
-                    <div class="result-item">
-                        <div class="result-header">
-                            <span class="result-type">${result.type.toUpperCase()}</span>
-                            <span class="result-score ${scoreClass}">↑ ${result.score}</span>
-                        </div>
-                        <div class="result-title">${result.title || 'Comment in: ' + result.subreddit}</div>
-                        <div class="result-body">${result.body.substring(0, 300)}${result.body.length > 300 ? '...' : ''}</div>
-                        <div class="result-meta">
-                            <span>📍 r/${result.subreddit}</span>
-                            <span>⏰ ${result.created_utc}</span>
-                            <span>🏷️ ${result.intent_label}</span>
-                        </div>
-                        <div class="result-actions">
-                            <button class="btn btn-primary" onclick="generateReply(${index})">
-                                🤖 Generate AI Reply
-                            </button>
-                            <button class="btn btn-secondary" onclick="window.open('${result.url}', '_blank')">
-                                🔗 Open Reddit
-                            </button>
-                        </div>
-                        <div class="ai-reply" id="reply-${index}">
-                            <div class="ai-reply-text" id="reply-text-${index}"></div>
-                            <button class="btn btn-secondary" onclick="copyReply(${index})">
-                                📋 Copy Reply
-                            </button>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        let currentResults = [];
 
         async function scanReddit() {
             const btn = document.getElementById('scanBtn');
@@ -738,6 +619,76 @@
             }
         }
 
+        function displayResults(results) {
+            const resultsList = document.getElementById('resultsList');
+            const stats = document.getElementById('stats');
+            
+            if (results.length === 0) {
+                resultsList.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><h3>No results found</h3><p>Try adjusting your keywords or date range</p></div>';
+                return;
+            }
+            
+            const posts = results.filter(r => r.type === 'post').length;
+            const comments = results.filter(r => r.type === 'comment').length;
+            const avgScore = Math.round(results.reduce((sum, r) => sum + (r.score || 0), 0) / results.length);
+            
+            stats.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-value">${results.length}</div>
+                    <div class="stat-label">Total Leads</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${posts}</div>
+                    <div class="stat-label">Posts</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${comments}</div>
+                    <div class="stat-label">Comments</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${avgScore}</div>
+                    <div class="stat-label">Avg Score</div>
+                </div>
+            `;
+            
+            resultsList.innerHTML = results.map((result, index) => {
+                const score = result.score || 0;
+                const scoreClass = score >= 10 ? 'score-high' : score >= 5 ? 'score-medium' : 'score-low';
+                const body = result.body || result.title || '';
+                const displayBody = body.length > 300 ? body.substring(0, 300) + '...' : body;
+                
+                return `
+                    <div class="result-item">
+                        <div class="result-header">
+                            <span class="result-type">${(result.type || 'post').toUpperCase()}</span>
+                            <span class="result-score ${scoreClass}">↑ ${score}</span>
+                        </div>
+                        <div class="result-title">${result.title || 'Comment'}</div>
+                        <div class="result-body">${displayBody}</div>
+                        <div class="result-meta">
+                            <span>📍 r/${result.subreddit}</span>
+                            <span>⏰ ${result.created_utc || 'Unknown'}</span>
+                            <span>🏷️ ${result.intent_label || 'General'}</span>
+                        </div>
+                        <div class="result-actions">
+                            <button class="btn btn-primary" onclick="generateReply(${index})">
+                                🤖 Generate AI Reply
+                            </button>
+                            <button class="btn btn-secondary" onclick="window.open('${result.url}', '_blank')">
+                                🔗 Open Reddit
+                            </button>
+                        </div>
+                        <div class="ai-reply" id="reply-${index}">
+                            <div class="ai-reply-text" id="reply-text-${index}"></div>
+                            <button class="btn btn-secondary" onclick="copyReply(${index})">
+                                📋 Copy Reply
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
         async function generateReply(index) {
             const result = currentResults[index];
             const replyDiv = document.getElementById(`reply-${index}`);
@@ -751,10 +702,10 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        context: result.body,
-                        intent_label: result.intent_label,
-                        include_link: true,
-                        type: result.type
+                        context: result.context || result.body || result.title,
+                        intent_label: result.intent_label || 'General discussion',
+                        include_link: result.include_link !== false,
+                        type: result.type || 'post'
                     })
                 });
                 
@@ -762,7 +713,8 @@
                 
                 if (data.success) {
                     const methodBadge = data.method === 'ai' ? '✨ AI Generated' : '📝 Template';
-                    replyText.innerHTML = `<div style="font-size: 11px; color: #999; margin-bottom: 8px;">${methodBadge}</div>${data.reply}`;
+                    const warningBadge = data.warning ? `<div style="color: #f59e0b; font-size: 11px; margin-bottom: 8px;">⚠️ ${data.warning}</div>` : '';
+                    replyText.innerHTML = `<div style="font-size: 11px; color: #999; margin-bottom: 8px;">${methodBadge}</div>${warningBadge}${data.reply}`;
                 } else {
                     replyText.innerHTML = `❌ Error: ${data.error}`;
                 }
@@ -777,7 +729,6 @@
             alert('✅ Reply copied to clipboard!');
         }
 
-        // Load keywords on page load
         loadDefaultKeywords();
     </script>
 </body>

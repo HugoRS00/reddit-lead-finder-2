@@ -5,7 +5,6 @@ Flask Web Application for Reddit Lead Finder
 from flask import Flask, render_template, jsonify, request
 from dotenv import load_dotenv
 from main import RedditLeadFinder
-import json
 import os
 
 # Load environment variables
@@ -21,11 +20,14 @@ def get_anthropic_client():
     try:
         from anthropic import Anthropic
         api_key = os.getenv('ANTHROPIC_API_KEY', '')
-        if api_key:
-            return Anthropic(api_key=api_key)
+        if not api_key:
+            print("Warning: ANTHROPIC_API_KEY not set")
+            return None
+        print("Anthropic client initialized successfully")
+        return Anthropic(api_key=api_key)
     except Exception as e:
         print(f"Failed to initialize Anthropic client: {e}")
-    return None
+        return None
 
 def get_lead_finder():
     """Get or create RedditLeadFinder instance."""
@@ -53,6 +55,8 @@ def scan_reddit():
         date_range = data.get('date_range', 7)
         search_comments = data.get('search_comments', True)
         
+        print(f"Scanning with {len(keywords)} keywords")
+        
         finder = get_lead_finder()
         
         # Use custom keywords if provided, otherwise use defaults
@@ -63,6 +67,8 @@ def scan_reddit():
             search_comments=search_comments
         )
         
+        print(f"Found {len(results)} results")
+        
         return jsonify({
             'success': True,
             'count': len(results),
@@ -70,6 +76,9 @@ def scan_reddit():
         })
     
     except Exception as e:
+        print(f"Error in scan_reddit: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             'success': False,
             'error': str(e)
@@ -85,6 +94,11 @@ def generate_reply():
         include_link = data.get('include_link', True)
         post_type = data.get('type', 'post')
         
+        print(f"\n=== Generate Reply Request ===")
+        print(f"Post type: {post_type}")
+        print(f"Context preview: {context[:200]}...")
+        print(f"Intent: {intent_label}")
+        
         if not context:
             return jsonify({
                 'success': False,
@@ -95,43 +109,47 @@ def generate_reply():
         client = get_anthropic_client()
         
         if not client:
-            # Fallback to template-based reply if no API key or client failed
+            print("⚠️ Anthropic client not available, using template fallback")
             reply = generate_template_reply(context, intent_label, include_link)
             return jsonify({
                 'success': True,
                 'reply': reply,
-                'method': 'template'
+                'method': 'template',
+                'warning': 'AI generation unavailable - check ANTHROPIC_API_KEY'
             })
         
         # Generate AI reply using Claude
-        prompt = f"""You are helping with outbound marketing for TradingWizard.ai, a platform that helps traders analyze charts and make better trading decisions.
+        prompt = f"""You are a helpful trader engaging in a Reddit discussion. Your goal is to provide genuine value while naturally mentioning TradingWizard.ai when relevant.
 
-TradingWizard.ai features:
-- AI-powered chart analysis for any stock, crypto, or forex symbol (not just chart uploads)
-- Select any symbol and get instant AI analysis
-- Technical analysis automation
-- Trading signals and market scans
-- Backtesting capabilities
+TradingWizard.ai is a platform that:
+- Provides AI-powered chart analysis for any stock, crypto, or forex symbol (not just uploads!)
+- Users can select any symbol and get instant technical analysis
+- Offers automated chart reading and pattern recognition
+- Helps traders make data-driven decisions
 
-Context from Reddit {post_type}:
-\"\"\"{context}\"\"\"
+Here's a Reddit {post_type} you're replying to:
+---
+{context}
+---
 
-Intent: {intent_label}
+Intent/Topic: {intent_label}
 
-Generate a helpful, natural reply that:
-1. First provides 50% genuine value (concrete trading tips, actionable advice, mini checklist)
-2. Then 50% soft mention of TradingWizard.ai
-3. Sounds conversational and human, not salesy
-4. Is 3-5 sentences total
-5. {"Includes a natural mention of TradingWizard.ai with a soft CTA" if include_link else "Mentions helpful tools generally without specific brands"}
-6. {"Include a light disclosure like '(I work on TradingWizard.ai)' at the end" if include_link else "No disclosure needed"}
+Write a natural, helpful reply that:
+1. Directly addresses their specific question or concern from the post above
+2. Provides 2-3 concrete, actionable tips based on their exact situation
+3. Sounds like a real human trader sharing experience (casual, conversational tone)
+4. {"Naturally mentions TradingWizard.ai as a helpful tool (1 sentence max, weave it in naturally)" if include_link else "Mentions helpful tools generally without specific brands"}
+5. {"Includes a casual disclosure like '(full disclosure: I work on it)' or '(I help build it)'" if include_link else "No disclosure needed"}
+6. Keep it 4-6 sentences total
+7. NO generic advice - everything must be relevant to their specific post content
 
-Keep it natural, helpful, and not spammy. Focus on being genuinely useful first."""
+Make it sound natural and helpful, not salesy or corporate. Write like you're genuinely trying to help a fellow trader."""
 
         try:
+            print(f"🚀 Sending request to Anthropic API...")
             message = client.messages.create(
                 model="claude-sonnet-4-20250514",
-                max_tokens=300,
+                max_tokens=400,
                 messages=[{
                     "role": "user",
                     "content": prompt
@@ -139,25 +157,29 @@ Keep it natural, helpful, and not spammy. Focus on being genuinely useful first.
             )
             
             reply = message.content[0].text
+            print(f"✅ Got AI reply: {reply[:150]}...")
             
             return jsonify({
                 'success': True,
                 'reply': reply,
                 'method': 'ai'
             })
+            
         except Exception as ai_error:
-            print(f"AI generation failed: {ai_error}")
-            # Fallback to template on AI error
+            print(f"❌ AI generation failed: {ai_error}")
             reply = generate_template_reply(context, intent_label, include_link)
             return jsonify({
                 'success': True,
                 'reply': reply,
-                'method': 'template_fallback'
+                'method': 'template_fallback',
+                'error': str(ai_error)
             })
     
     except Exception as e:
-        print(f"Error in generate_reply: {e}")
-        # Fallback to template
+        print(f"❌ Error in generate_reply: {e}")
+        import traceback
+        traceback.print_exc()
+        
         reply = generate_template_reply(
             data.get('context', ''),
             data.get('intent_label', 'General discussion'),
