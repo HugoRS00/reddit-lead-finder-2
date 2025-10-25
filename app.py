@@ -25,6 +25,10 @@ def index():
     """Render the main page."""
     return render_template('index.html')
 
+@app.route('/health')
+def health():
+    return {'status': 'healthy'}, 200
+
 @app.route('/api/scan', methods=['POST'])
 def scan_reddit():
     """Scan Reddit for leads."""
