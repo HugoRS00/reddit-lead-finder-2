@@ -270,6 +270,64 @@
             opacity: 0.8;
         }
 
+        .length-filter {
+            margin: 20px 0;
+        }
+
+        .length-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .length-option {
+            position: relative;
+        }
+
+        .length-option input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .length-option label {
+            display: block;
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            background: #f8f9fa;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+
+        .length-option label:hover {
+            border-color: #667eea;
+            background: #f0f2ff;
+        }
+
+        .length-option input[type="radio"]:checked + label {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .length-title {
+            display: block;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .length-description {
+            display: block;
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
         .scan-btn {
             width: 100%;
             padding: 16px;
@@ -575,6 +633,33 @@
                 </div>
             </div>
 
+            <div class="length-filter">
+                <div class="section-title">📏 Reply Length</div>
+                <div class="length-selector">
+                    <div class="length-option">
+                        <input type="radio" id="shortLength" name="replyLength" value="short" checked>
+                        <label for="shortLength">
+                            <span class="length-title">Short</span>
+                            <span class="length-description">2-3 sentences, quick tips</span>
+                        </label>
+                    </div>
+                    <div class="length-option">
+                        <input type="radio" id="mediumLength" name="replyLength" value="medium">
+                        <label for="mediumLength">
+                            <span class="length-title">Medium</span>
+                            <span class="length-description">4-6 sentences, detailed advice</span>
+                        </label>
+                    </div>
+                    <div class="length-option">
+                        <input type="radio" id="longLength" name="replyLength" value="long">
+                        <label for="longLength">
+                            <span class="length-title">Long</span>
+                            <span class="length-description">7+ sentences, comprehensive guide</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
             <button class="scan-btn" onclick="scanReddit()" id="scanBtn">
                 🔍 Start Scanning
             </button>
@@ -779,8 +864,9 @@
             const replyDiv = document.getElementById(`reply-${index}`);
             const replyText = document.getElementById(`reply-text-${index}`);
             
-            // Get selected reply mode
+            // Get selected reply mode and length
             const replyMode = document.querySelector('input[name="replyMode"]:checked').value;
+            const replyLength = document.querySelector('input[name="replyLength"]:checked').value;
             
             replyText.innerHTML = '<div class="loading"><div class="spinner"></div>Generating AI reply...</div>';
             replyDiv.classList.add('show');
@@ -793,6 +879,7 @@
                         context: result.context || result.body || result.title,
                         intent_label: result.intent_label || 'General discussion',
                         reply_mode: replyMode,
+                        reply_length: replyLength,
                         type: result.type || 'post'
                     })
                 });

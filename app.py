@@ -92,6 +92,7 @@ def generate_reply():
         context = data.get('context', '')
         intent_label = data.get('intent_label', 'General discussion')
         reply_mode = data.get('reply_mode', 'full')  # ghost, soft, full
+        reply_length = data.get('reply_length', 'medium')  # short, medium, long
         post_type = data.get('type', 'post')
         
         print(f"\n=== Generate Reply Request ===")
@@ -99,6 +100,7 @@ def generate_reply():
         print(f"Context preview: {context[:200]}...")
         print(f"Intent: {intent_label}")
         print(f"Reply mode: {reply_mode}")
+        print(f"Reply length: {reply_length}")
         
         if not context:
             return jsonify({
@@ -111,13 +113,20 @@ def generate_reply():
         
         if not client:
             print("⚠️ Anthropic client not available, using template fallback")
-            reply = generate_template_reply(context, intent_label, reply_mode)
+            reply = generate_template_reply(context, intent_label, reply_mode, reply_length)
             return jsonify({
                 'success': True,
                 'reply': reply,
                 'method': 'template',
                 'warning': 'AI generation unavailable - check ANTHROPIC_API_KEY'
             })
+        
+        # Generate length-specific instructions
+        length_instructions = {
+            'short': "Keep it 2-3 sentences total - be concise and direct",
+            'medium': "Keep it 4-6 sentences total - provide detailed advice",
+            'long': "Keep it 7+ sentences total - give comprehensive guidance"
+        }
         
         # Generate AI reply using Claude based on reply mode
         if reply_mode == 'ghost':
@@ -132,10 +141,10 @@ Intent/Topic: {intent_label}
 
 Write a natural, helpful reply that:
 1. Directly addresses their specific question or concern from the post above
-2. Provides 2-3 concrete, actionable tips based on their exact situation
+2. Provides concrete, actionable tips based on their exact situation
 3. Sounds like a real human trader sharing experience (casual, conversational tone)
 4. NO brand mentions or tool recommendations - pure educational value only
-5. Keep it 4-6 sentences total
+5. {length_instructions[reply_length]}
 6. NO generic advice - everything must be relevant to their specific post content
 7. IMPORTANT: Use regular dashes (-) not em dashes (—)
 
@@ -159,10 +168,10 @@ Intent/Topic: {intent_label}
 
 Write a natural, helpful reply that:
 1. Directly addresses their specific question or concern from the post above
-2. Provides 2-3 concrete, actionable tips based on their exact situation
+2. Provides concrete, actionable tips based on their exact situation
 3. Sounds like a real human trader sharing experience (casual, conversational tone)
 4. Naturally mentions TradingWizard AI as a helpful tool (1 sentence max, weave it in naturally) - NO LINKS
-5. Keep it 4-6 sentences total
+5. {length_instructions[reply_length]}
 6. NO generic advice - everything must be relevant to their specific post content
 7. IMPORTANT: Use regular dashes (-) not em dashes (—)
 
@@ -186,11 +195,11 @@ Intent/Topic: {intent_label}
 
 Write a natural, helpful reply that:
 1. Directly addresses their specific question or concern from the post above
-2. Provides 2-3 concrete, actionable tips based on their exact situation
+2. Provides concrete, actionable tips based on their exact situation
 3. Sounds like a real human trader sharing experience (casual, conversational tone)
 4. Naturally mentions TradingWizard.ai as a helpful tool with a link (1 sentence max, weave it in naturally)
 5. Includes a casual disclosure like '(full disclosure: I work on it)' or '(I help build it)'
-6. Keep it 4-6 sentences total
+6. {length_instructions[reply_length]}
 7. NO generic advice - everything must be relevant to their specific post content
 8. IMPORTANT: Use regular dashes (-) not em dashes (—)
 
@@ -222,7 +231,7 @@ Make it sound natural and helpful, not salesy or corporate. Write like you're ge
             print(f"❌ AI generation failed: {ai_error}")
             print(f"❌ Error type: {type(ai_error).__name__}")
             print(f"❌ Full error: {str(ai_error)}")
-            reply = generate_template_reply(context, intent_label, reply_mode)
+            reply = generate_template_reply(context, intent_label, reply_mode, reply_length)
             return jsonify({
                 'success': True,
                 'reply': reply,
@@ -247,7 +256,7 @@ Make it sound natural and helpful, not salesy or corporate. Write like you're ge
             'error': str(e)
         })
 
-def generate_template_reply(context: str, intent_label: str, reply_mode: str) -> str:
+def generate_template_reply(context: str, intent_label: str, reply_mode: str, reply_length: str) -> str:
     """Generate a template-based reply as fallback."""
     tips = {
         'Tool-seeking': "Start by defining your timeframe and setup type. Map key support/resistance levels, then confirm with momentum indicators. Focus on keeping your edge simple and repeatable.",
@@ -257,6 +266,12 @@ def generate_template_reply(context: str, intent_label: str, reply_mode: str) ->
     }
     
     tip = tips.get(intent_label, tips['General discussion'])
+    
+    # Adjust tip length based on reply_length
+    if reply_length == 'short':
+        tip = tip.split('.')[0] + '.'  # Take only first sentence
+    elif reply_length == 'long':
+        tip += " Remember to backtest your strategy and keep detailed logs of your trades for continuous improvement."
     
     if reply_mode == 'ghost':
         cta = " Tools that automate chart reading and setup identification can speed this up significantly."
