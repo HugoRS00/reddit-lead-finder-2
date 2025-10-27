@@ -123,7 +123,7 @@ def generate_reply():
         
         # Generate length-specific instructions
         length_instructions = {
-            'short': "Keep it 2-3 sentences total - be concise and direct",
+            'short': "Keep it VERY short - just 1-2 sentences maximum, be extremely concise",
             'medium': "Keep it 4-6 sentences total - provide detailed advice",
             'long': "Keep it 7+ sentences total - give comprehensive guidance"
         }
@@ -269,7 +269,14 @@ def generate_template_reply(context: str, intent_label: str, reply_mode: str, re
     
     # Adjust tip length based on reply_length
     if reply_length == 'short':
-        tip = tip.split('.')[0] + '.'  # Take only first sentence
+        # Make it extremely short - just key words/phrases
+        short_tips = {
+            'Tool-seeking': "Focus on price action and volume.",
+            'How-to': "Keep it simple - price, levels, momentum.",
+            'Problem-solving': "Strip down to basics - price action only.",
+            'General discussion': "Document everything, track stats."
+        }
+        tip = short_tips.get(intent_label, "Keep it simple and track your results.")
     elif reply_length == 'long':
         tip += " Remember to backtest your strategy and keep detailed logs of your trades for continuous improvement."
     
@@ -281,6 +288,61 @@ def generate_template_reply(context: str, intent_label: str, reply_mode: str, re
         cta = " If you want AI-powered analysis for any chart, TradingWizard.ai lets you analyze stocks, crypto, or forex by just selecting the symbol - instant technical breakdown. (Disclosure: I help build it)"
     
     return tip + cta
+
+@app.route('/api/filter-results', methods=['POST'])
+def filter_results():
+    """Filter and sort results based on user criteria."""
+    try:
+        data = request.json
+        results = data.get('results', [])
+        min_score = data.get('min_score', 0)
+        max_score = data.get('max_score', 100)
+        intent_filter = data.get('intent_filter', '')
+        sort_by = data.get('sort_by', 'score')
+        
+        print(f"\n=== Filter Results Request ===")
+        print(f"Results count: {len(results)}")
+        print(f"Score range: {min_score}-{max_score}")
+        print(f"Intent filter: {intent_filter}")
+        print(f"Sort by: {sort_by}")
+        
+        # Filter by score range
+        filtered_results = [
+            r for r in results 
+            if min_score <= (r.get('score', 0)) <= max_score
+        ]
+        
+        # Filter by intent if specified
+        if intent_filter:
+            filtered_results = [
+                r for r in filtered_results 
+                if r.get('intent_label', '') == intent_filter
+            ]
+        
+        # Sort results
+        if sort_by == 'score':
+            filtered_results.sort(key=lambda x: x.get('score', 0), reverse=True)
+        elif sort_by == 'date':
+            filtered_results.sort(key=lambda x: x.get('created_utc', 0), reverse=True)
+        elif sort_by == 'date-old':
+            filtered_results.sort(key=lambda x: x.get('created_utc', 0))
+        
+        print(f"Filtered results count: {len(filtered_results)}")
+        
+        return jsonify({
+            'success': True,
+            'count': len(filtered_results),
+            'results': filtered_results
+        })
+    
+    except Exception as e:
+        print(f"Error in filter_results: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 @app.route('/api/default-keywords', methods=['GET'])
 def get_default_keywords():

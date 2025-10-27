@@ -328,6 +328,82 @@
             opacity: 0.8;
         }
 
+        .smart-filters {
+            margin: 20px 0;
+        }
+
+        .filters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 15px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .filter-group label {
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .range-inputs {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .range-inputs input {
+            flex: 1;
+            padding: 10px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .range-inputs input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .range-inputs span {
+            font-weight: 600;
+            color: #666;
+        }
+
+        .filter-group select {
+            padding: 10px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .filter-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .filter-actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            justify-content: center;
+        }
+
+        .filter-actions .btn {
+            padding: 12px 24px;
+            font-size: 14px;
+        }
+
         .scan-btn {
             width: 100%;
             padding: 16px;
@@ -640,7 +716,7 @@
                         <input type="radio" id="shortLength" name="replyLength" value="short" checked>
                         <label for="shortLength">
                             <span class="length-title">Short</span>
-                            <span class="length-description">2-3 sentences, quick tips</span>
+                            <span class="length-description">1-2 sentences, quick tips</span>
                         </label>
                     </div>
                     <div class="length-option">
@@ -660,6 +736,46 @@
                 </div>
             </div>
 
+            <div class="smart-filters">
+                <div class="section-title">🔍 Smart Filters</div>
+                <div class="filters-grid">
+                    <div class="filter-group">
+                        <label for="scoreFilter">Score Range:</label>
+                        <div class="range-inputs">
+                            <input type="number" id="minScore" placeholder="Min" min="0" max="100" value="5">
+                            <span>-</span>
+                            <input type="number" id="maxScore" placeholder="Max" min="0" max="100" value="100">
+                        </div>
+                    </div>
+                    <div class="filter-group">
+                        <label for="intentFilter">Intent Filter:</label>
+                        <select id="intentFilter">
+                            <option value="">All Intents</option>
+                            <option value="Tool-seeking">Tool-seeking</option>
+                            <option value="How-to">How-to</option>
+                            <option value="Problem-solving">Problem-solving</option>
+                            <option value="General discussion">General discussion</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="sortBy">Sort By:</label>
+                        <select id="sortBy">
+                            <option value="score">Score (High to Low)</option>
+                            <option value="date">Date (Newest First)</option>
+                            <option value="date-old">Date (Oldest First)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="filter-actions">
+                    <button class="btn btn-primary" onclick="applyFilters()">
+                        🔍 Apply Filters
+                    </button>
+                    <button class="btn btn-secondary" onclick="clearFilters()">
+                        🗑️ Clear Filters
+                    </button>
+                </div>
+            </div>
+
             <button class="scan-btn" onclick="scanReddit()" id="scanBtn">
                 🔍 Start Scanning
             </button>
@@ -676,6 +792,7 @@
         let selectedKeywords = new Set();
         let customKeywords = [];
         let currentResults = [];
+        let originalResults = [];
 
         async function loadDefaultKeywords() {
             try {
@@ -777,6 +894,7 @@
                 
                 if (data.success) {
                     currentResults = data.results;
+                    originalResults = [...data.results]; // Save original results
                     displayResults(data.results);
                 } else {
                     resultsList.innerHTML = `<div class="empty-state">❌ Error: ${data.error}</div>`;
@@ -902,6 +1020,56 @@
             const replyText = document.getElementById(`reply-text-${index}`).innerText;
             navigator.clipboard.writeText(replyText);
             alert('✅ Reply copied to clipboard!');
+        }
+
+        async function applyFilters() {
+            if (currentResults.length === 0) {
+                alert('No results to filter. Please scan Reddit first.');
+                return;
+            }
+
+            const minScore = parseInt(document.getElementById('minScore').value) || 0;
+            const maxScore = parseInt(document.getElementById('maxScore').value) || 100;
+            const intentFilter = document.getElementById('intentFilter').value;
+            const sortBy = document.getElementById('sortBy').value;
+
+            try {
+                const response = await fetch('/api/filter-results', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        results: currentResults,
+                        min_score: minScore,
+                        max_score: maxScore,
+                        intent_filter: intentFilter,
+                        sort_by: sortBy
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    currentResults = data.results;
+                    displayResults(data.results);
+                } else {
+                    alert(`Error filtering results: ${data.error}`);
+                }
+            } catch (error) {
+                alert(`Error filtering results: ${error.message}`);
+            }
+        }
+
+        function clearFilters() {
+            document.getElementById('minScore').value = 5;
+            document.getElementById('maxScore').value = 100;
+            document.getElementById('intentFilter').value = '';
+            document.getElementById('sortBy').value = 'score';
+            
+            // Re-display original results
+            if (originalResults.length > 0) {
+                currentResults = [...originalResults];
+                displayResults(originalResults);
+            }
         }
 
         loadDefaultKeywords();
