@@ -123,107 +123,107 @@ def generate_reply():
         
         # Generate length-specific instructions
         length_instructions = {
-            'short': "Keep it VERY short - just 1-2 sentences maximum, be extremely concise",
+            'short': "ULTRA SHORT - just 1 sentence, maximum 10-15 words. Be extremely concise.",
             'medium': "Keep it 4-6 sentences total - provide detailed advice",
-            'long': "Keep it 7+ sentences total - give comprehensive guidance"
+            'long': "Keep it 7+ sentences total with line breaks for readability - give comprehensive guidance"
         }
         
         # Generate AI reply using Claude based on reply mode
         if reply_mode == 'ghost':
-            prompt = f"""You are a helpful trader engaging in a Reddit discussion. Your goal is to provide pure value without any brand mentions.
+            prompt = f"""You're a real trader commenting on Reddit. Write like a human who's been trading for years and genuinely wants to help.
 
-Here's a Reddit {post_type} you're replying to:
+Here's what someone posted:
 ---
 {context}
 ---
 
-Intent/Topic: {intent_label}
+Topic: {intent_label}
 
-Write a natural, helpful reply that:
-1. Directly addresses their specific question or concern from the post above
-2. Provides concrete, actionable tips based on their exact situation
-3. Sounds like a real human trader sharing experience (casual, conversational tone)
-4. NO brand mentions or tool recommendations - pure educational value only
-5. {length_instructions[reply_length]}
-6. NO generic advice - everything must be relevant to their specific post content
-7. IMPORTANT: Use regular dashes (-) not em dashes (—)
+Reply naturally - like you're texting a friend who asked for trading advice. Be conversational, use different sentence lengths, maybe throw in some trading slang or abbreviations. {length_instructions[reply_length]}
 
-Make it sound natural and helpful, not salesy or corporate. Write like you're genuinely trying to help a fellow trader."""
+Key things:
+- Answer their specific question directly
+- Share real trading experience, not textbook stuff
+- Use casual language (like "tbh", "imo", "fwiw" occasionally)
+- Vary your sentence structure - some short, some longer
+- NO brand mentions or tool recommendations
+- Sound like you're actually helping, not selling anything
+
+Write like a real person, not a bot."""
         
         elif reply_mode == 'soft':
-            prompt = f"""You are a helpful trader engaging in a Reddit discussion. Your goal is to provide genuine value while naturally mentioning TradingWizard AI (without links).
+            prompt = f"""You're a real trader commenting on Reddit. Write like a human who's been trading for years and genuinely wants to help.
 
-TradingWizard AI is a platform that:
-- Provides AI-powered chart analysis for any stock, crypto, or forex symbol
-- Users can select any symbol and get instant technical analysis
-- Offers automated chart reading and pattern recognition
-- Helps traders make data-driven decisions
-
-Here's a Reddit {post_type} you're replying to:
+Here's what someone posted:
 ---
 {context}
 ---
 
-Intent/Topic: {intent_label}
+Topic: {intent_label}
 
-Write a natural, helpful reply that:
-1. Directly addresses their specific question or concern from the post above
-2. Provides concrete, actionable tips based on their exact situation
-3. Sounds like a real human trader sharing experience (casual, conversational tone)
-4. Naturally mentions TradingWizard AI as a helpful tool (1 sentence max, weave it in naturally) - NO LINKS
-5. {length_instructions[reply_length]}
-6. NO generic advice - everything must be relevant to their specific post content
-7. IMPORTANT: Use regular dashes (-) not em dashes (—)
+Reply naturally - like you're texting a friend who asked for trading advice. Be conversational, use different sentence lengths, maybe throw in some trading slang or abbreviations. {length_instructions[reply_length]}
 
-Make it sound natural and helpful, not salesy or corporate. Write like you're genuinely trying to help a fellow trader."""
+Key things:
+- Answer their specific question directly
+- Share real trading experience, not textbook stuff
+- Use casual language (like "tbh", "imo", "fwiw" occasionally)
+- Vary your sentence structure - some short, some longer
+- Naturally mention TradingWizard AI as a helpful tool (1 sentence max, weave it in naturally) - NO LINKS
+- Sound like you're actually helping, not selling anything
+
+Write like a real person, not a bot."""
         
         else:  # full mode
-            prompt = f"""You are a helpful trader engaging in a Reddit discussion. Your goal is to provide genuine value while naturally mentioning TradingWizard.ai with a link when relevant.
+            prompt = f"""You're a real trader commenting on Reddit. Write like a human who's been trading for years and genuinely wants to help.
 
-TradingWizard.ai is a platform that:
-- Provides AI-powered chart analysis for any stock, crypto, or forex symbol (not just uploads!)
-- Users can select any symbol and get instant technical analysis
-- Offers automated chart reading and pattern recognition
-- Helps traders make data-driven decisions
-
-Here's a Reddit {post_type} you're replying to:
+Here's what someone posted:
 ---
 {context}
 ---
 
-Intent/Topic: {intent_label}
+Topic: {intent_label}
 
-Write a natural, helpful reply that:
-1. Directly addresses their specific question or concern from the post above
-2. Provides concrete, actionable tips based on their exact situation
-3. Sounds like a real human trader sharing experience (casual, conversational tone)
-4. Naturally mentions TradingWizard.ai as a helpful tool with a link (1 sentence max, weave it in naturally)
-5. Includes a casual disclosure like '(full disclosure: I work on it)' or '(I help build it)'
-6. {length_instructions[reply_length]}
-7. NO generic advice - everything must be relevant to their specific post content
-8. IMPORTANT: Use regular dashes (-) not em dashes (—)
+Reply naturally - like you're texting a friend who asked for trading advice. Be conversational, use different sentence lengths, maybe throw in some trading slang or abbreviations. {length_instructions[reply_length]}
 
-Make it sound natural and helpful, not salesy or corporate. Write like you're genuinely trying to help a fellow trader."""
+Key things:
+- Answer their specific question directly
+- Share real trading experience, not textbook stuff
+- Use casual language (like "tbh", "imo", "fwiw" occasionally)
+- Vary your sentence structure - some short, some longer
+- Naturally mention TradingWizard.ai as a helpful tool with a link (1 sentence max, weave it in naturally)
+- Include a casual disclosure like '(full disclosure: I work on it)' or '(I help build it)'
+- Sound like you're actually helping, not selling anything
+
+Write like a real person, not a bot."""
 
         try:
             print(f"🚀 Sending request to Anthropic API...")
             print(f"📊 API Key present: {bool(os.getenv('ANTHROPIC_API_KEY'))}")
             
-            message = client.messages.create(
-                model="claude-sonnet-4-20250514",
-                max_tokens=400,
-                messages=[{
-                    "role": "user",
-                    "content": prompt
-                }]
-            )
-            
-            reply = message.content[0].text
-            print(f"✅ Got AI reply: {reply[:150]}...")
+            # Generate multiple variants (A/B/C)
+            variants = []
+            for i in range(3):
+                variant_prompt = prompt + f"\n\nGenerate variant {chr(65+i)} - make it slightly different in tone/style but same core message."
+                
+                message = client.messages.create(
+                    model="claude-sonnet-4-20250514",
+                    max_tokens=400,
+                    messages=[{
+                        "role": "user",
+                        "content": variant_prompt
+                    }]
+                )
+                
+                variant_reply = message.content[0].text
+                variants.append({
+                    'letter': chr(65+i),  # A, B, C
+                    'reply': variant_reply
+                })
+                print(f"✅ Got variant {chr(65+i)}: {variant_reply[:100]}...")
             
             return jsonify({
                 'success': True,
-                'reply': reply,
+                'variants': variants,
                 'method': 'ai'
             })
             
@@ -231,10 +231,19 @@ Make it sound natural and helpful, not salesy or corporate. Write like you're ge
             print(f"❌ AI generation failed: {ai_error}")
             print(f"❌ Error type: {type(ai_error).__name__}")
             print(f"❌ Full error: {str(ai_error)}")
-            reply = generate_template_reply(context, intent_label, reply_mode, reply_length)
+            
+            # Generate template variants
+            variants = []
+            for i in range(3):
+                variant_reply = generate_template_reply(context, intent_label, reply_mode, reply_length, variant=i)
+                variants.append({
+                    'letter': chr(65+i),  # A, B, C
+                    'reply': variant_reply
+                })
+            
             return jsonify({
                 'success': True,
-                'reply': reply,
+                'variants': variants,
                 'method': 'template_fallback',
                 'error': str(ai_error)
             })
@@ -244,19 +253,29 @@ Make it sound natural and helpful, not salesy or corporate. Write like you're ge
         import traceback
         traceback.print_exc()
         
-        reply = generate_template_reply(
-            data.get('context', ''),
-            data.get('intent_label', 'General discussion'),
-            data.get('reply_mode', 'full')
-        )
+        # Generate template variants for final fallback
+        variants = []
+        for i in range(3):
+            variant_reply = generate_template_reply(
+                data.get('context', ''),
+                data.get('intent_label', 'General discussion'),
+                data.get('reply_mode', 'full'),
+                data.get('reply_length', 'medium'),
+                variant=i
+            )
+            variants.append({
+                'letter': chr(65+i),  # A, B, C
+                'reply': variant_reply
+            })
+        
         return jsonify({
             'success': True,
-            'reply': reply,
+            'variants': variants,
             'method': 'template_fallback',
             'error': str(e)
         })
 
-def generate_template_reply(context: str, intent_label: str, reply_mode: str, reply_length: str) -> str:
+def generate_template_reply(context: str, intent_label: str, reply_mode: str, reply_length: str, variant: int = 0) -> str:
     """Generate a template-based reply as fallback."""
     tips = {
         'Tool-seeking': "Start by defining your timeframe and setup type. Map key support/resistance levels, then confirm with momentum indicators. Focus on keeping your edge simple and repeatable.",
@@ -269,25 +288,69 @@ def generate_template_reply(context: str, intent_label: str, reply_mode: str, re
     
     # Adjust tip length based on reply_length
     if reply_length == 'short':
-        # Make it extremely short - just key words/phrases
-        short_tips = {
-            'Tool-seeking': "Focus on price action and volume.",
-            'How-to': "Keep it simple - price, levels, momentum.",
-            'Problem-solving': "Strip down to basics - price action only.",
-            'General discussion': "Document everything, track stats."
+        # Make it ULTRA short - just a few words
+        ultra_short_tips = {
+            'Tool-seeking': "Price action + volume.",
+            'How-to': "Price, levels, momentum.",
+            'Problem-solving': "Price action only.",
+            'General discussion': "Track everything."
         }
-        tip = short_tips.get(intent_label, "Keep it simple and track your results.")
+        tip = ultra_short_tips.get(intent_label, "Keep it simple.")
     elif reply_length == 'long':
-        tip += " Remember to backtest your strategy and keep detailed logs of your trades for continuous improvement."
+        tip += "\n\nRemember to backtest your strategy and keep detailed logs of your trades for continuous improvement."
     
-    if reply_mode == 'ghost':
-        cta = " Tools that automate chart reading and setup identification can speed this up significantly."
-    elif reply_mode == 'soft':
-        cta = " TradingWizard AI can help automate chart analysis and pattern recognition for any symbol you're interested in."
-    else:  # full mode
-        cta = " If you want AI-powered analysis for any chart, TradingWizard.ai lets you analyze stocks, crypto, or forex by just selecting the symbol - instant technical breakdown. (Disclosure: I help build it)"
+    # Add variant-specific modifications
+    if variant == 1:  # Variant B
+        tip = tip.replace("Start by", "First, I'd").replace("Break it", "Honestly, break it").replace("Common issue", "Yeah, common issue")
+    elif variant == 2:  # Variant C
+        tip = tip.replace("Start by", "IMO, start by").replace("Break it", "Tbh, break it").replace("Common issue", "Fwiw, common issue")
+    
+    if reply_length == 'short':
+        # Ultra short CTAs
+        if reply_mode == 'ghost':
+            cta = " Use tools."
+        elif reply_mode == 'soft':
+            cta = " TradingWizard AI helps."
+        else:  # full mode
+            cta = " TradingWizard.ai for analysis. (I help build it)"
+    else:
+        # Regular CTAs
+        if reply_mode == 'ghost':
+            cta = " Tools that automate chart reading and setup identification can speed this up significantly."
+        elif reply_mode == 'soft':
+            cta = " TradingWizard AI can help automate chart analysis and pattern recognition for any symbol you're interested in."
+        else:  # full mode
+            cta = " If you want AI-powered analysis for any chart, TradingWizard.ai lets you analyze stocks, crypto, or forex by just selecting the symbol - instant technical breakdown. (Disclosure: I help build it)"
     
     return tip + cta
+
+@app.route('/api/save-lead', methods=['POST'])
+def save_lead():
+    """Save a lead with status tracking."""
+    try:
+        data = request.json
+        lead_id = data.get('lead_id')
+        status = data.get('status', 'saved')  # new, saved, replied, skipped
+        
+        print(f"\n=== Save Lead Request ===")
+        print(f"Lead ID: {lead_id}")
+        print(f"Status: {status}")
+        
+        # In a real app, you'd save this to a database
+        # For now, we'll just return success
+        return jsonify({
+            'success': True,
+            'message': f'Lead marked as {status}',
+            'lead_id': lead_id,
+            'status': status
+        })
+    
+    except Exception as e:
+        print(f"Error in save_lead: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 @app.route('/api/filter-results', methods=['POST'])
 def filter_results():

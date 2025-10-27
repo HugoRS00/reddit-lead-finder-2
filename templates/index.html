@@ -561,6 +561,45 @@
             background: #e0e0e0;
         }
 
+        .btn-success {
+            background: #4caf50;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #45a049;
+        }
+
+        .btn-warning {
+            background: #ff9800;
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: #e68900;
+        }
+
+        .btn-danger {
+            background: #f44336;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #da190b;
+        }
+
+        .save-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .save-actions .btn {
+            padding: 8px 16px;
+            font-size: 12px;
+        }
+
         .btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
@@ -591,11 +630,52 @@
             }
         }
 
-        .ai-reply-text {
+        .variants-container {
+            display: none;
+        }
+
+        .variants-container.show {
+            display: block;
+            animation: slideDown 0.3s ease;
+        }
+
+        .variant {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            background: white;
+        }
+
+        .variant-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .variant-letter {
+            font-weight: bold;
+            font-size: 16px;
+            color: #667eea;
+        }
+
+        .variant-text {
             color: #333;
             font-size: 14px;
             line-height: 1.6;
             margin-bottom: 10px;
+            white-space: pre-line; /* Preserve line breaks */
+        }
+
+        .variant-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .variant-actions .btn {
+            padding: 8px 16px;
+            font-size: 12px;
         }
 
         .loading {
@@ -716,7 +796,7 @@
                         <input type="radio" id="shortLength" name="replyLength" value="short" checked>
                         <label for="shortLength">
                             <span class="length-title">Short</span>
-                            <span class="length-description">1-2 sentences, quick tips</span>
+                            <span class="length-description">Ultra short, just a few words</span>
                         </label>
                     </div>
                     <div class="length-option">
@@ -730,7 +810,7 @@
                         <input type="radio" id="longLength" name="replyLength" value="long">
                         <label for="longLength">
                             <span class="length-title">Long</span>
-                            <span class="length-description">7+ sentences, comprehensive guide</span>
+                            <span class="length-description">7+ sentences with line breaks, comprehensive guide</span>
                         </label>
                     </div>
                 </div>
@@ -965,12 +1045,20 @@
                             <button class="btn btn-secondary" onclick="window.open('${result.url}', '_blank')">
                                 🔗 Open Reddit
                             </button>
+                            <div class="save-actions">
+                                <button class="btn btn-success" onclick="saveLead(${index}, 'saved')">
+                                    💾 Save
+                                </button>
+                                <button class="btn btn-warning" onclick="saveLead(${index}, 'replied')">
+                                    ✅ Replied
+                                </button>
+                                <button class="btn btn-danger" onclick="saveLead(${index}, 'skipped')">
+                                    ⏭️ Skip
+                                </button>
+                            </div>
                         </div>
                         <div class="ai-reply" id="reply-${index}">
-                            <div class="ai-reply-text" id="reply-text-${index}"></div>
-                            <button class="btn btn-secondary" onclick="copyReply(${index})">
-                                📋 Copy Reply
-                            </button>
+                            <div class="variants-container" id="variants-${index}"></div>
                         </div>
                     </div>
                 `;
@@ -980,13 +1068,13 @@
         async function generateReply(index) {
             const result = currentResults[index];
             const replyDiv = document.getElementById(`reply-${index}`);
-            const replyText = document.getElementById(`reply-text-${index}`);
+            const variantsContainer = document.getElementById(`variants-${index}`);
             
             // Get selected reply mode and length
             const replyMode = document.querySelector('input[name="replyMode"]:checked').value;
             const replyLength = document.querySelector('input[name="replyLength"]:checked').value;
             
-            replyText.innerHTML = '<div class="loading"><div class="spinner"></div>Generating AI reply...</div>';
+            variantsContainer.innerHTML = '<div class="loading"><div class="spinner"></div>Generating AI reply variants...</div>';
             replyDiv.classList.add('show');
             
             try {
@@ -1007,19 +1095,63 @@
                 if (data.success) {
                     const methodBadge = data.method === 'ai' ? '✨ AI Generated' : '📝 Template';
                     const warningBadge = data.warning ? `<div style="color: #f59e0b; font-size: 11px; margin-bottom: 8px;">⚠️ ${data.warning}</div>` : '';
-                    replyText.innerHTML = `<div style="font-size: 11px; color: #999; margin-bottom: 8px;">${methodBadge}</div>${warningBadge}${data.reply}`;
+                    
+                    let variantsHtml = `<div style="font-size: 11px; color: #999; margin-bottom: 15px;">${methodBadge}</div>${warningBadge}`;
+                    
+                    data.variants.forEach(variant => {
+                        variantsHtml += `
+                            <div class="variant">
+                                <div class="variant-header">
+                                    <span class="variant-letter">Variant ${variant.letter}</span>
+                                </div>
+                                <div class="variant-text">${variant.reply}</div>
+                                <div class="variant-actions">
+                                    <button class="btn btn-primary" onclick="copyVariant('${variant.reply}')">
+                                        📋 Copy
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    variantsContainer.innerHTML = variantsHtml;
+                    variantsContainer.classList.add('show');
                 } else {
-                    replyText.innerHTML = `❌ Error: ${data.error}`;
+                    variantsContainer.innerHTML = `❌ Error: ${data.error}`;
                 }
             } catch (error) {
-                replyText.innerHTML = `❌ Error: ${error.message}`;
+                variantsContainer.innerHTML = `❌ Error: ${error.message}`;
             }
         }
 
-        function copyReply(index) {
-            const replyText = document.getElementById(`reply-text-${index}`).innerText;
+        function copyVariant(replyText) {
             navigator.clipboard.writeText(replyText);
             alert('✅ Reply copied to clipboard!');
+        }
+
+        async function saveLead(index, status) {
+            const result = currentResults[index];
+            
+            try {
+                const response = await fetch('/api/save-lead', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        lead_id: `${result.subreddit}_${result.id || index}`,
+                        status: status
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(`✅ Lead marked as ${status}!`);
+                } else {
+                    alert(`❌ Error: ${data.error}`);
+                }
+            } catch (error) {
+                alert(`❌ Error: ${error.message}`);
+            }
         }
 
         async function applyFilters() {
