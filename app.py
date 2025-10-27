@@ -91,13 +91,14 @@ def generate_reply():
         data = request.json
         context = data.get('context', '')
         intent_label = data.get('intent_label', 'General discussion')
-        include_link = data.get('include_link', True)
+        reply_mode = data.get('reply_mode', 'full')  # ghost, soft, full
         post_type = data.get('type', 'post')
         
         print(f"\n=== Generate Reply Request ===")
         print(f"Post type: {post_type}")
         print(f"Context preview: {context[:200]}...")
         print(f"Intent: {intent_label}")
+        print(f"Reply mode: {reply_mode}")
         
         if not context:
             return jsonify({
@@ -110,7 +111,7 @@ def generate_reply():
         
         if not client:
             print("⚠️ Anthropic client not available, using template fallback")
-            reply = generate_template_reply(context, intent_label, include_link)
+            reply = generate_template_reply(context, intent_label, reply_mode)
             return jsonify({
                 'success': True,
                 'reply': reply,
@@ -118,8 +119,57 @@ def generate_reply():
                 'warning': 'AI generation unavailable - check ANTHROPIC_API_KEY'
             })
         
-        # Generate AI reply using Claude
-        prompt = f"""You are a helpful trader engaging in a Reddit discussion. Your goal is to provide genuine value while naturally mentioning TradingWizard.ai when relevant.
+        # Generate AI reply using Claude based on reply mode
+        if reply_mode == 'ghost':
+            prompt = f"""You are a helpful trader engaging in a Reddit discussion. Your goal is to provide pure value without any brand mentions.
+
+Here's a Reddit {post_type} you're replying to:
+---
+{context}
+---
+
+Intent/Topic: {intent_label}
+
+Write a natural, helpful reply that:
+1. Directly addresses their specific question or concern from the post above
+2. Provides 2-3 concrete, actionable tips based on their exact situation
+3. Sounds like a real human trader sharing experience (casual, conversational tone)
+4. NO brand mentions or tool recommendations - pure educational value only
+5. Keep it 4-6 sentences total
+6. NO generic advice - everything must be relevant to their specific post content
+7. IMPORTANT: Use regular dashes (-) not em dashes (—)
+
+Make it sound natural and helpful, not salesy or corporate. Write like you're genuinely trying to help a fellow trader."""
+        
+        elif reply_mode == 'soft':
+            prompt = f"""You are a helpful trader engaging in a Reddit discussion. Your goal is to provide genuine value while naturally mentioning TradingWizard AI (without links).
+
+TradingWizard AI is a platform that:
+- Provides AI-powered chart analysis for any stock, crypto, or forex symbol
+- Users can select any symbol and get instant technical analysis
+- Offers automated chart reading and pattern recognition
+- Helps traders make data-driven decisions
+
+Here's a Reddit {post_type} you're replying to:
+---
+{context}
+---
+
+Intent/Topic: {intent_label}
+
+Write a natural, helpful reply that:
+1. Directly addresses their specific question or concern from the post above
+2. Provides 2-3 concrete, actionable tips based on their exact situation
+3. Sounds like a real human trader sharing experience (casual, conversational tone)
+4. Naturally mentions TradingWizard AI as a helpful tool (1 sentence max, weave it in naturally) - NO LINKS
+5. Keep it 4-6 sentences total
+6. NO generic advice - everything must be relevant to their specific post content
+7. IMPORTANT: Use regular dashes (-) not em dashes (—)
+
+Make it sound natural and helpful, not salesy or corporate. Write like you're genuinely trying to help a fellow trader."""
+        
+        else:  # full mode
+            prompt = f"""You are a helpful trader engaging in a Reddit discussion. Your goal is to provide genuine value while naturally mentioning TradingWizard.ai with a link when relevant.
 
 TradingWizard.ai is a platform that:
 - Provides AI-powered chart analysis for any stock, crypto, or forex symbol (not just uploads!)
@@ -138,8 +188,8 @@ Write a natural, helpful reply that:
 1. Directly addresses their specific question or concern from the post above
 2. Provides 2-3 concrete, actionable tips based on their exact situation
 3. Sounds like a real human trader sharing experience (casual, conversational tone)
-4. {"Naturally mentions TradingWizard.ai as a helpful tool (1 sentence max, weave it in naturally)" if include_link else "Mentions helpful tools generally without specific brands"}
-5. {"Includes a casual disclosure like '(full disclosure: I work on it)' or '(I help build it)'" if include_link else "No disclosure needed"}
+4. Naturally mentions TradingWizard.ai as a helpful tool with a link (1 sentence max, weave it in naturally)
+5. Includes a casual disclosure like '(full disclosure: I work on it)' or '(I help build it)'
 6. Keep it 4-6 sentences total
 7. NO generic advice - everything must be relevant to their specific post content
 8. IMPORTANT: Use regular dashes (-) not em dashes (—)
@@ -172,7 +222,7 @@ Make it sound natural and helpful, not salesy or corporate. Write like you're ge
             print(f"❌ AI generation failed: {ai_error}")
             print(f"❌ Error type: {type(ai_error).__name__}")
             print(f"❌ Full error: {str(ai_error)}")
-            reply = generate_template_reply(context, intent_label, include_link)
+            reply = generate_template_reply(context, intent_label, reply_mode)
             return jsonify({
                 'success': True,
                 'reply': reply,
@@ -188,7 +238,7 @@ Make it sound natural and helpful, not salesy or corporate. Write like you're ge
         reply = generate_template_reply(
             data.get('context', ''),
             data.get('intent_label', 'General discussion'),
-            data.get('include_link', True)
+            data.get('reply_mode', 'full')
         )
         return jsonify({
             'success': True,
@@ -197,7 +247,7 @@ Make it sound natural and helpful, not salesy or corporate. Write like you're ge
             'error': str(e)
         })
 
-def generate_template_reply(context: str, intent_label: str, include_link: bool) -> str:
+def generate_template_reply(context: str, intent_label: str, reply_mode: str) -> str:
     """Generate a template-based reply as fallback."""
     tips = {
         'Tool-seeking': "Start by defining your timeframe and setup type. Map key support/resistance levels, then confirm with momentum indicators. Focus on keeping your edge simple and repeatable.",
@@ -208,10 +258,12 @@ def generate_template_reply(context: str, intent_label: str, include_link: bool)
     
     tip = tips.get(intent_label, tips['General discussion'])
     
-    if include_link:
-        cta = " If you want AI-powered analysis for any chart, TradingWizard.ai lets you analyze stocks, crypto, or forex by just selecting the symbol - instant technical breakdown. (Disclosure: I help build it)"
-    else:
+    if reply_mode == 'ghost':
         cta = " Tools that automate chart reading and setup identification can speed this up significantly."
+    elif reply_mode == 'soft':
+        cta = " TradingWizard AI can help automate chart analysis and pattern recognition for any symbol you're interested in."
+    else:  # full mode
+        cta = " If you want AI-powered analysis for any chart, TradingWizard.ai lets you analyze stocks, crypto, or forex by just selecting the symbol - instant technical breakdown. (Disclosure: I help build it)"
     
     return tip + cta
 

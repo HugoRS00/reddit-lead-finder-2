@@ -212,6 +212,64 @@
             cursor: pointer;
         }
 
+        .reply-modes {
+            margin: 20px 0;
+        }
+
+        .mode-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .mode-option {
+            position: relative;
+        }
+
+        .mode-option input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .mode-option label {
+            display: block;
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            background: #f8f9fa;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+
+        .mode-option label:hover {
+            border-color: #667eea;
+            background: #f0f2ff;
+        }
+
+        .mode-option input[type="radio"]:checked + label {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .mode-title {
+            display: block;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .mode-description {
+            display: block;
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
         .scan-btn {
             width: 100%;
             padding: 16px;
@@ -490,6 +548,33 @@
                 <label for="searchComments">Also search comments (2x more opportunities)</label>
             </div>
 
+            <div class="reply-modes">
+                <div class="section-title">🎭 Reply Modes</div>
+                <div class="mode-selector">
+                    <div class="mode-option">
+                        <input type="radio" id="ghostMode" name="replyMode" value="ghost" checked>
+                        <label for="ghostMode">
+                            <span class="mode-title">Ghost</span>
+                            <span class="mode-description">Pure value, no mention</span>
+                        </label>
+                    </div>
+                    <div class="mode-option">
+                        <input type="radio" id="softMode" name="replyMode" value="soft">
+                        <label for="softMode">
+                            <span class="mode-title">Soft</span>
+                            <span class="mode-description">Mention "TradingWizard AI" (no link)</span>
+                        </label>
+                    </div>
+                    <div class="mode-option">
+                        <input type="radio" id="fullMode" name="replyMode" value="full">
+                        <label for="fullMode">
+                            <span class="mode-title">Full</span>
+                            <span class="mode-description">Mention "TradingWizard.ai" (with link)</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
             <button class="scan-btn" onclick="scanReddit()" id="scanBtn">
                 🔍 Start Scanning
             </button>
@@ -694,6 +779,9 @@
             const replyDiv = document.getElementById(`reply-${index}`);
             const replyText = document.getElementById(`reply-text-${index}`);
             
+            // Get selected reply mode
+            const replyMode = document.querySelector('input[name="replyMode"]:checked').value;
+            
             replyText.innerHTML = '<div class="loading"><div class="spinner"></div>Generating AI reply...</div>';
             replyDiv.classList.add('show');
             
@@ -704,7 +792,7 @@
                     body: JSON.stringify({
                         context: result.context || result.body || result.title,
                         intent_label: result.intent_label || 'General discussion',
-                        include_link: result.include_link !== false,
+                        reply_mode: replyMode,
                         type: result.type || 'post'
                     })
                 });
