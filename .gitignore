@@ -23,6 +23,8 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+
+# Virtual environments
 venv/
 ENV/
 env/
@@ -43,5 +45,19 @@ Thumbs.db
 leads.json
 *.log
 
-# Railway
-.railway
+# Database
+leads.db
+*.db
+*.sqlite
+*.sqlite3
+```
+
+**That's the complete file!** Just copy-paste this entire thing into your `.gitignore` file, replacing everything that's currently in it.
+
+The important new lines are at the very bottom:
+```
+# Database
+leads.db
+*.db
+*.sqlite
+*.sqlite3
