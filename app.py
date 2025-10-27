@@ -124,7 +124,7 @@ def generate_reply():
         # Generate length-specific instructions
         length_instructions = {
             'short': "ULTRA SHORT - just 1 sentence, maximum 10-15 words. Be extremely concise.",
-            'medium': "Keep it 4-6 sentences total - provide detailed advice",
+            'medium': "Keep it 4-6 sentences total - provide detailed advice with line breaks between sentences for readability",
             'long': "Keep it 7+ sentences total with line breaks for readability - give comprehensive guidance"
         }
         
@@ -215,11 +215,13 @@ Write like a real person, not a bot."""
                 )
                 
                 variant_reply = message.content[0].text
+                # Add line breaks if 4+ sentences
+                processed_reply = add_line_breaks_if_needed(variant_reply)
                 variants.append({
                     'letter': chr(65+i),  # A, B, C
-                    'reply': variant_reply
+                    'reply': processed_reply
                 })
-                print(f"✅ Got variant {chr(65+i)}: {variant_reply[:100]}...")
+                print(f"✅ Got variant {chr(65+i)}: {processed_reply[:100]}...")
             
             return jsonify({
                 'success': True,
@@ -236,9 +238,11 @@ Write like a real person, not a bot."""
             variants = []
             for i in range(3):
                 variant_reply = generate_template_reply(context, intent_label, reply_mode, reply_length, variant=i)
+                # Add line breaks if 4+ sentences
+                processed_reply = add_line_breaks_if_needed(variant_reply)
                 variants.append({
                     'letter': chr(65+i),  # A, B, C
-                    'reply': variant_reply
+                    'reply': processed_reply
                 })
             
             return jsonify({
@@ -263,9 +267,11 @@ Write like a real person, not a bot."""
                 data.get('reply_length', 'medium'),
                 variant=i
             )
+            # Add line breaks if 4+ sentences
+            processed_reply = add_line_breaks_if_needed(variant_reply)
             variants.append({
                 'letter': chr(65+i),  # A, B, C
-                'reply': variant_reply
+                'reply': processed_reply
             })
         
         return jsonify({
@@ -274,6 +280,30 @@ Write like a real person, not a bot."""
             'method': 'template_fallback',
             'error': str(e)
         })
+
+def add_line_breaks_if_needed(text: str) -> str:
+    """Add line breaks between sentences if there are 4 or more sentences."""
+    import re
+    
+    # Split by sentence endings (. ! ?) but keep the punctuation
+    sentences = re.split(r'([.!?])\s+', text)
+    
+    # Reconstruct sentences with punctuation
+    reconstructed_sentences = []
+    for i in range(0, len(sentences), 2):
+        if i + 1 < len(sentences):
+            sentence = sentences[i] + sentences[i + 1]
+            reconstructed_sentences.append(sentence.strip())
+        elif sentences[i].strip():
+            reconstructed_sentences.append(sentences[i].strip())
+    
+    # Filter out empty sentences
+    sentences = [s for s in reconstructed_sentences if s.strip()]
+    
+    if len(sentences) >= 4:
+        # Add line breaks between sentences
+        return '\n\n'.join(sentences)
+    return text
 
 def generate_template_reply(context: str, intent_label: str, reply_mode: str, reply_length: str, variant: int = 0) -> str:
     """Generate a template-based reply as fallback."""
