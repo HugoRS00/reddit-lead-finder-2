@@ -3,23 +3,3 @@ python-dotenv==1.0.0
 requests==2.31.0
 flask==3.0.0
 gunicorn==21.2.0
-```
-
----
-
-## 📄 FILE 4: `Procfile` (NEW FILE)
-```
-web: gunicorn app:app
-```
-
----
-
-## 📄 FILE 5: `.gitignore` (ADD THESE LINES AT THE END)
-
-Add these lines to your existing `.gitignore`:
-```
-# Database
-leads.db
-*.db
-*.sqlite
-*.sqlite3
