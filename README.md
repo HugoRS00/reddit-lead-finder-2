@@ -24,7 +24,7 @@ TradingWizard.ai features:
 ## 🎯 Features
 
 ### Search Capabilities
-- Search **Reddit posts/comments** and **X tweets**
+- Search **Reddit posts/comments** and **top level X tweets** to avoid duplicate threads
 - Multiple trading subreddits (algotrading, trading, daytrading, stocks, forex, crypto, etc.)
 - Customizable keyword selection
 - Adjustable date range (1-30 days)

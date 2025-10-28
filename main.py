@@ -167,7 +167,7 @@ class XLeadFinder:
         })
 
     def search_x(self, keywords: Optional[List[str]] = None, date_range_days: int = 7,
-                 limit: int = 50) -> List[Dict]:
+                 limit: int = 50, include_replies: bool = False) -> List[Dict]:
         """Search X (Twitter) for relevant tweets."""
         search_keywords = keywords or self.keywords
         if not search_keywords:
@@ -180,12 +180,16 @@ class XLeadFinder:
             # X only allows a single lang filter; use the first language preference
             language_query = f" lang:{self.languages[0]}"
 
-        query = f"{keyword_query}{language_query} -is:retweet"
+        filters = ["-is:retweet"]
+        if not include_replies:
+            filters.append("-is:reply")
+
+        query = " ".join(part for part in [keyword_query + language_query] + filters if part)
 
         params = {
             "query": query,
             "max_results": min(limit, 100),
-            "tweet.fields": "author_id,created_at,public_metrics,lang",
+            "tweet.fields": "author_id,created_at,public_metrics,lang,conversation_id",
             "user.fields": "username,name,public_metrics",
             "expansions": "author_id"
         }
@@ -211,7 +215,14 @@ class XLeadFinder:
         users = {user["id"]: user for user in data.get("includes", {}).get("users", [])}
 
         results: List[Dict] = []
+        seen_conversations = set()
         for tweet in tweets:
+            convo_id = tweet.get("conversation_id")
+            if convo_id and convo_id in seen_conversations:
+                continue
+            if convo_id:
+                seen_conversations.add(convo_id)
+
             author = users.get(tweet["author_id"], {})
             username = author.get("username", "unknown")
             display_name = author.get("name") or username
