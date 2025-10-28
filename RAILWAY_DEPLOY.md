@@ -38,6 +38,7 @@ In Railway dashboard, click on your service, then go to **"Variables"** tab:
 
 **Required:**
 ```
+X_BEARER_TOKEN=your_x_bearer_token
 REDDIT_CLIENT_ID=your_reddit_client_id
 REDDIT_CLIENT_SECRET=your_reddit_secret
 REDDIT_USER_AGENT=TradingWizard Lead Finder v2.0
@@ -47,6 +48,7 @@ REDDIT_USER_AGENT=TradingWizard Lead Finder v2.0
 ```
 ANTHROPIC_API_KEY=your_anthropic_api_key
 PORT=5000
+TWITTER_BEARER_TOKEN=alternative_env_name_if_you_prefer
 ```
 
 ### 4. Deploy!
