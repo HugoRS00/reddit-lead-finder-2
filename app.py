@@ -4,7 +4,13 @@ Flask Web Application for Reddit Lead Finder
 
 from flask import Flask, render_template, jsonify, request
 from dotenv import load_dotenv
-from main import RedditLeadFinder, XLeadFinder
+from main import (
+    RedditLeadFinder,
+    XLeadFinder,
+    load_dedupe_cache,
+    save_dedupe_cache,
+    merge_dedupe_ids
+)
 import os
 
 # Load environment variables
@@ -70,16 +76,35 @@ def scan_leads():
         date_range = data.get('date_range', 7)
         search_comments = data.get('search_comments', True)
         platforms = data.get('platforms') or ['reddit']
+        min_followers = data.get('min_followers', 0)
+        min_engagement = data.get('min_engagement', 0)
+        dedupe_enabled = data.get('dedupe', True)
         
         print(f"Scanning with {len(keywords)} keywords across platforms: {platforms}")
+        
+        def safe_int(value, default=0):
+            try:
+                return int(value)
+            except (TypeError, ValueError):
+                return default
+
+        min_followers = safe_int(min_followers, 0)
+        min_engagement = safe_int(min_engagement, 0)
+        dedupe_enabled = bool(dedupe_enabled) if dedupe_enabled is not None else True
         
         finder = get_lead_finder()
         combined_results = []
         errors = {}
         max_results = finder.config.get('max_results', 50)
+        rate_limits = {}
         
         # Use custom keywords if provided, otherwise use defaults
         custom_keywords = keywords if keywords else None
+        dedupe_cache = load_dedupe_cache() if dedupe_enabled else {"reddit": [], "x": []}
+        seen_cache = {
+            "reddit": set(str(item) for item in dedupe_cache.get("reddit", [])),
+            "x": set(str(item) for item in dedupe_cache.get("x", []))
+        } if dedupe_enabled else {"reddit": set(), "x": set()}
 
         if 'reddit' in platforms:
             try:
@@ -89,8 +114,25 @@ def scan_leads():
                     limit=max_results,
                     search_comments=search_comments
                 )
+                if dedupe_enabled:
+                    reddit_results = [
+                        result for result in reddit_results
+                        if str(result.get('id')) not in seen_cache['reddit']
+                    ]
                 combined_results.extend(reddit_results)
                 print(f"Found {len(reddit_results)} Reddit results")
+
+                try:
+                    auth_limits = getattr(finder.reddit, "auth", None)
+                    rate_data = auth_limits.limits if auth_limits and getattr(auth_limits, "limits", None) else None
+                    if rate_data:
+                        rate_limits['reddit'] = {
+                            'remaining': rate_data.get('remaining'),
+                            'used': rate_data.get('used'),
+                            'reset_timestamp': rate_data.get('reset_timestamp')
+                        }
+                except Exception as rate_error:
+                    print(f"Unable to read Reddit rate info: {rate_error}")
             except Exception as reddit_error:
                 errors['reddit'] = str(reddit_error)
                 print(f"Error scanning Reddit: {reddit_error}")
@@ -105,16 +147,40 @@ def scan_leads():
                     x_results = x_finder.search_x(
                         keywords=custom_keywords,
                         date_range_days=date_range,
-                        limit=max_results
+                        limit=max_results,
+                        min_followers=min_followers,
+                        min_engagement=min_engagement
                     )
+                    if dedupe_enabled:
+                        x_results = [
+                            result for result in x_results
+                            if str(result.get('id')) not in seen_cache['x']
+                        ]
                     combined_results.extend(x_results)
                     print(f"Found {len(x_results)} X results")
+                    if x_finder.rate_snapshot:
+                        rate_limits['x'] = x_finder.rate_snapshot
                 except Exception as x_error:
                     errors['x'] = str(x_error)
                     print(f"Error scanning X: {x_error}")
 
         combined_results.sort(key=lambda x: x.get('score', 0), reverse=True)
         combined_results = combined_results[:max_results]
+
+        if dedupe_enabled and combined_results:
+            new_reddit_ids = [
+                str(result.get('id')) for result in combined_results
+                if result.get('source') == 'reddit'
+            ]
+            new_x_ids = [
+                str(result.get('id')) for result in combined_results
+                if result.get('source') == 'x'
+            ]
+            if new_reddit_ids:
+                merge_dedupe_ids(dedupe_cache, 'reddit', new_reddit_ids)
+            if new_x_ids:
+                merge_dedupe_ids(dedupe_cache, 'x', new_x_ids)
+            save_dedupe_cache(dedupe_cache)
 
         if not combined_results and errors:
             error_messages = '; '.join(f"{platform.upper()}: {message}" for platform, message in errors.items())
@@ -127,7 +193,8 @@ def scan_leads():
         response = {
             'success': True,
             'count': len(combined_results),
-            'results': combined_results
+            'results': combined_results,
+            'rate_limits': rate_limits
         }
 
         if errors:
@@ -173,88 +240,76 @@ def generate_reply():
         
         if not client:
             print("⚠️ Anthropic client not available, using template fallback")
-            reply = generate_template_reply(context, intent_label, reply_mode, reply_length)
+            reply = generate_template_reply(
+                context,
+                intent_label,
+                reply_mode,
+                reply_length,
+                voice_instructions=voice_instructions
+            )
             return jsonify({
                 'success': True,
                 'reply': reply,
                 'method': 'template',
                 'warning': 'AI generation unavailable - check ANTHROPIC_API_KEY'
             })
-        
-        # Generate length-specific instructions
+        voice_profile = data.get('voice_profile') or {}
+        voice_name = (voice_profile.get('name') or '').strip()
+        voice_instructions_raw = (voice_profile.get('instructions') or '').strip()
+        voice_instructions = (
+            voice_instructions_raw.replace('-', ' ').replace('–', ' ').replace('—', ' ')
+        )
+        print(f"Voice profile: {voice_profile}")
+
+        # Generate length-specific instructions without hyphen characters
         length_instructions = {
-            'short': "ULTRA SHORT - just 1 sentence, maximum 10-15 words. Be extremely concise.",
-            'medium': "Keep it 4-6 sentences total - provide detailed advice with line breaks between sentences for readability",
-            'long': "Keep it 7+ sentences total with line breaks for readability - give comprehensive guidance"
+            'short': "Keep it ultra short. One sentence with around ten words.",
+            'medium': "Keep it to roughly five sentences. Provide detailed advice with line breaks between sentences.",
+            'long': "Write at least seven sentences. Use line breaks between sentences and share thorough guidance."
         }
-        
-        # Generate AI reply using Claude based on reply mode
-        if reply_mode == 'ghost':
-            prompt = f"""You're a real trader commenting on Reddit. Write like a human who's been trading for years and genuinely wants to help.
+        length_line = length_instructions.get(reply_length, length_instructions['medium'])
 
-Here's what someone posted:
----
-{context}
----
+        platform_label = 'X' if post_type == 'tweet' else 'Reddit'
+        safe_intent = (intent_label or 'General discussion').replace('-', ' ')
 
-Topic: {intent_label}
+        core_guidelines = [
+            "Answer the question directly and reference details from the post.",
+            "Share insight from real trading experience rather than generic tips.",
+            "Use varied sentence lengths and keep the tone casual.",
+            "Do not use hyphen characters or long dashes; choose commas or new sentences instead."
+        ]
 
-Reply naturally - like you're texting a friend who asked for trading advice. Be conversational, use different sentence lengths, maybe throw in some trading slang or abbreviations. {length_instructions[reply_length]}
+        if voice_instructions:
+            core_guidelines.insert(1, f"Match this tone: {voice_instructions}")
+        elif voice_name:
+            core_guidelines.insert(1, f"Match the tone described as {voice_name}.")
 
-Key things:
-- Answer their specific question directly
-- Share real trading experience, not textbook stuff
-- Use casual language (like "tbh", "imo", "fwiw" occasionally)
-- Vary your sentence structure - some short, some longer
-- NO brand mentions or tool recommendations
-- Sound like you're actually helping, not selling anything
+        mode_guidelines = {
+            'ghost': [
+                "Keep brand mentions out of the reply.",
+                "Focus entirely on helping the poster."
+            ],
+            'soft': [
+                "Mention TradingWizard AI once as a helpful option without adding a link.",
+                "Keep the mention light and friendly."
+            ],
+            'full': [
+                "Mention TradingWizard.ai once with https://tradingwizard.ai and make it feel natural.",
+                "Add a casual disclosure such as (I help build it)."
+            ]
+        }
 
-Write like a real person, not a bot."""
-        
-        elif reply_mode == 'soft':
-            prompt = f"""You're a real trader commenting on Reddit. Write like a human who's been trading for years and genuinely wants to help.
+        directives = core_guidelines + mode_guidelines.get(reply_mode, mode_guidelines['full'])
+        directives.append(length_line)
+        directives_text = "\n".join(f"{idx}. {line}" for idx, line in enumerate(directives, start=1))
 
-Here's what someone posted:
----
-{context}
----
-
-Topic: {intent_label}
-
-Reply naturally - like you're texting a friend who asked for trading advice. Be conversational, use different sentence lengths, maybe throw in some trading slang or abbreviations. {length_instructions[reply_length]}
-
-Key things:
-- Answer their specific question directly
-- Share real trading experience, not textbook stuff
-- Use casual language (like "tbh", "imo", "fwiw" occasionally)
-- Vary your sentence structure - some short, some longer
-- Naturally mention TradingWizard AI as a helpful tool (1 sentence max, weave it in naturally) - NO LINKS
-- Sound like you're actually helping, not selling anything
-
-Write like a real person, not a bot."""
-        
-        else:  # full mode
-            prompt = f"""You're a real trader commenting on Reddit. Write like a human who's been trading for years and genuinely wants to help.
-
-Here's what someone posted:
----
-{context}
----
-
-Topic: {intent_label}
-
-Reply naturally - like you're texting a friend who asked for trading advice. Be conversational, use different sentence lengths, maybe throw in some trading slang or abbreviations. {length_instructions[reply_length]}
-
-Key things:
-- Answer their specific question directly
-- Share real trading experience, not textbook stuff
-- Use casual language (like "tbh", "imo", "fwiw" occasionally)
-- Vary your sentence structure - some short, some longer
-- Naturally mention TradingWizard.ai as a helpful tool with a link (1 sentence max, weave it in naturally)
-- Include a casual disclosure like '(full disclosure: I work on it)' or '(I help build it)'
-- Sound like you're actually helping, not selling anything
-
-Write like a real person, not a bot."""
+        prompt = (
+            f"You are a battle tested trader replying on {platform_label}. Sound like a real human friend.\n\n"
+            f"Here is the post:\n<<<\n{context}\n>>>\n\n"
+            f"Topic: {safe_intent}\n\n"
+            f"Guidelines:\n{directives_text}\n\n"
+            f"Write the reply now."
+        )
 
         try:
             print(f"🚀 Sending request to Anthropic API...")
@@ -263,7 +318,7 @@ Write like a real person, not a bot."""
             # Generate multiple variants (A/B/C)
             variants = []
             for i in range(3):
-                variant_prompt = prompt + f"\n\nGenerate variant {chr(65+i)} - make it slightly different in tone/style but same core message."
+                variant_prompt = prompt + f"\n\nGenerate variant {chr(65+i)}. Make it slightly different in tone and style while keeping the same core message."
                 
                 message = client.messages.create(
                     model="claude-sonnet-4-20250514",
@@ -297,7 +352,14 @@ Write like a real person, not a bot."""
             # Generate template variants
             variants = []
             for i in range(3):
-                variant_reply = generate_template_reply(context, intent_label, reply_mode, reply_length, variant=i)
+                variant_reply = generate_template_reply(
+                    context,
+                    intent_label,
+                    reply_mode,
+                    reply_length,
+                    variant=i,
+                    voice_instructions=voice_instructions
+                )
                 # Add line breaks if 4+ sentences
                 processed_reply = add_line_breaks_if_needed(variant_reply)
                 variants.append({
@@ -325,7 +387,8 @@ Write like a real person, not a bot."""
                 data.get('intent_label', 'General discussion'),
                 data.get('reply_mode', 'full'),
                 data.get('reply_length', 'medium'),
-                variant=i
+                variant=i,
+                voice_instructions=voice_instructions
             )
             # Add line breaks if 4+ sentences
             processed_reply = add_line_breaks_if_needed(variant_reply)
@@ -365,20 +428,27 @@ def add_line_breaks_if_needed(text: str) -> str:
         return '\n\n'.join(sentences)
     return text
 
-def generate_template_reply(context: str, intent_label: str, reply_mode: str, reply_length: str, variant: int = 0) -> str:
+def generate_template_reply(
+    context: str,
+    intent_label: str,
+    reply_mode: str,
+    reply_length: str,
+    variant: int = 0,
+    voice_instructions: str = ''
+) -> str:
     """Generate a template-based reply as fallback."""
     tips = {
-        'Tool-seeking': "Start by defining your timeframe and setup type. Map key support/resistance levels, then confirm with momentum indicators. Focus on keeping your edge simple and repeatable.",
-        'How-to': "Break it into steps: define what you're analyzing, overlay key levels, add 1-2 confirmation indicators, and document your rules. Simple beats complex every time.",
+        'Tool-seeking': "Start by defining your timeframe and setup type. Map key support and resistance levels, then confirm with momentum indicators. Focus on keeping your edge simple and repeatable.",
+        'How-to': "Break it into steps: define what you're analyzing, overlay key levels, add one or two confirmation indicators, and document your rules. Simple beats complex every time.",
         'Problem-solving': "Common issue: too many conflicting indicators. Strip it down to price action, volume, and one momentum indicator. Also check if you're trading during choppy hours.",
-        'General discussion': "For consistent results, document your setups, track your stats, and refine what's actually profitable vs what just feels good."
+        'General discussion': "For consistent results, document your setups, track your stats, and refine what actually performs instead of what just feels good."
     }
     
     tip = tips.get(intent_label, tips['General discussion'])
     
     # Adjust tip length based on reply_length
     if reply_length == 'short':
-        # Make it ULTRA short - just a few words
+        # Keep it ultra short to just a few words
         ultra_short_tips = {
             'Tool-seeking': "Price action + volume.",
             'How-to': "Price, levels, momentum.",
@@ -394,7 +464,22 @@ def generate_template_reply(context: str, intent_label: str, reply_mode: str, re
         tip = tip.replace("Start by", "First, I'd").replace("Break it", "Honestly, break it").replace("Common issue", "Yeah, common issue")
     elif variant == 2:  # Variant C
         tip = tip.replace("Start by", "IMO, start by").replace("Break it", "Tbh, break it").replace("Common issue", "Fwiw, common issue")
-    
+
+    clean_voice = (voice_instructions or '').replace('-', ' ').replace('–', ' ').replace('—', ' ').strip()
+    voice_hint = clean_voice.lower()
+    opener = ""
+    if voice_hint:
+        if any(word in voice_hint for word in ['casual', 'buddy', 'friend', 'slang']):
+            opener = "Yo, appreciate you bringing this up. "
+        elif any(word in voice_hint for word in ['mentor', 'supportive', 'coach']):
+            opener = "Happy you asked this, let's walk through it. "
+        elif any(word in voice_hint for word in ['direct', 'no fluff', 'straight']):
+            opener = "Straight talk ahead. "
+        else:
+            opener = ""
+        if opener and reply_length == 'short':
+            opener = opener.strip() + " "
+
     if reply_length == 'short':
         # Ultra short CTAs
         if reply_mode == 'ghost':
@@ -410,8 +495,10 @@ def generate_template_reply(context: str, intent_label: str, reply_mode: str, re
         elif reply_mode == 'soft':
             cta = " TradingWizard AI can help automate chart analysis and pattern recognition for any symbol you're interested in."
         else:  # full mode
-            cta = " If you want AI-powered analysis for any chart, TradingWizard.ai lets you analyze stocks, crypto, or forex by just selecting the symbol - instant technical breakdown. (Disclosure: I help build it)"
+            cta = " If you want AI powered analysis for any chart, TradingWizard.ai gives an instant technical breakdown when you pick the symbol. (Disclosure: I help build it)"
     
+    if opener:
+        return opener + tip + cta
     return tip + cta
 
 @app.route('/api/save-lead', methods=['POST'])

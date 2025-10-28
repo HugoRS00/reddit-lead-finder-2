@@ -13,6 +13,9 @@ An intelligent web-based tool for finding and engaging with trading communities 
 - ✅ **One-Click Actions** - Open posts, generate replies, copy text
 - ✅ **Real-time Stats** - See posts/comments/scores at a glance
 - ✅ **Railway Ready** - Deploy to Railway.com in minutes
+- ✅ **Voice Presets** - Save human sounding tones and reuse them instantly
+- ✅ **Lead Memory** - Skip conversations you've already reviewed
+- ✅ **Rate Dashboard** - Watch Reddit and X limits while you scan
 
 ### Enhanced Product Understanding
 TradingWizard.ai features:
@@ -29,6 +32,9 @@ TradingWizard.ai features:
 - Customizable keyword selection
 - Adjustable date range (1-30 days)
 - Smart relevance scoring (0-100)
+- Advanced X filters for follower counts and engagement
+- Auto dedupe cache so repeat scans skip familiar threads
+- Optional conversation snippets so you see fresh replies in each X thread
 
 ### AI Reply Generation
 - **Claude-powered** natural reply generation
@@ -36,6 +42,8 @@ TradingWizard.ai features:
 - Respects subreddit rules (no links in restricted subs)
 - One-click generation per post (prevents token waste)
 - Fallback to templates if API key not provided
+- Voice presets let you define the slang and tone before generating
+- Prompts enforce "no hyphen" wording so responses stay human sounding
 
 ### User Interface
 - Clean, modern design
@@ -44,6 +52,9 @@ TradingWizard.ai features:
 - One-click copy to clipboard
 - Direct links to Reddit posts/comments
 - Mobile responsive
+- Voice preset cards with local storage
+- Advanced settings for follower thresholds and lead memory
+- Live rate limit dashboard for Reddit and X calls
 
 ## 🚀 Quick Start
 
@@ -149,30 +160,37 @@ TradingWizard.ai features:
 - Selected keywords are highlighted in purple
 - Default keywords are optimized for TradingWizard.ai
 
-### 2. Set Options
+### 2. Pick a Voice Profile
+- Choose one of the presets or add your own tone description
+- Voice instructions travel with every AI request (and stay stored locally)
+
+### 3. Set Options
 - Adjust date range (1-30 days)
 - Toggle comment search on/off
+- Use advanced filters: minimum followers, minimum engagement, dedupe toggle
 
-### 3. Start Scan
+### 4. Start Scan
 - Click "🔍 Start Scan"
 - Wait for results (usually 10-30 seconds)
 
-### 4. Review Results
+### 5. Review Results
 - See statistics: total leads, Reddit vs X breakdown, average score
+- Rate dashboard shows current Reddit/X quota and reset timers
 - Each lead shows:
   - Title and content
   - Relevance score
   - Intent label
   - Source metadata (subreddit or X handle)
-  - Risk flags (if any)
+  - Conversation snippets for X threads (when available)
 
-### 5. Generate AI Reply
+### 6. Generate AI Reply
 - Click "✨ Generate AI Reply" for any lead
 - AI generates a helpful, natural reply
 - Includes value-first content + soft pitch
 - Respects subreddit rules
+- Honours your selected voice instructions
 
-### 6. Copy and Post
+### 7. Copy and Post
 - Click "📋 Copy Reply" to copy to clipboard
 - Click "🔗 Open" to visit the post/tweet on the source platform
 - Paste your reply and engage!
@@ -184,21 +202,33 @@ TradingWizard.ai features:
 - All keywords selected by default
 - Easy to customize your search
 
+### Voice Presets
+- Save your favourite tones locally in one click
+- Custom descriptions sync to the Claude prompt automatically
+- Reset to defaults at any time
+
 ### Lead Cards
 - Color-coded relevance scores
 - Type badges (post/comment/tweet)
 - Intent labels (tool-seeking, how-to, etc.)
-- Risk warnings
+- Conversation snippets for X threads when context is available
 
 ### AI Reply Section
 - Expandable reply area
 - Loading animation while generating
 - One-click copy button
+- Shows whether AI or template fallback produced the text
+
+### Advanced Settings
+- Minimum follower and engagement filters for X searches
+- Lead memory switch to skip threads you've already handled
+- Comment search toggle for Reddit
 
 ### Statistics Dashboard
 - Total leads found
 - Reddit vs X breakdown (posts, comments, tweets)
 - Average relevance score
+- Live Reddit and X rate information with reset timers
 
 ## ⚙️ Configuration
 
@@ -220,6 +250,11 @@ Customize your search:
   "relevance_threshold": 60
 }
 ```
+
+### Optional Environment Tweaks
+- `LEAD_DEDUPE_CACHE` – override where the lead memory JSON file lives
+- `LEAD_DEDUPE_MAX_IDS` – tune how many IDs stay in the cache (default 400)
+- `X_CONTEXT_FETCH_LIMIT` – cap how many X conversation lookups run per scan (default 5)
 
 ### Scoring System
 

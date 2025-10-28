@@ -8,6 +8,7 @@ import json
 import os
 import time
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Dict, List, Optional
 
 import praw
@@ -15,6 +16,55 @@ import requests
 from dotenv import load_dotenv
 
 load_dotenv()
+
+DEDUPE_CACHE_PATH = os.getenv('LEAD_DEDUPE_CACHE', 'lead_dedupe_cache.json')
+MAX_DEDUPE_IDS = int(os.getenv('LEAD_DEDUPE_MAX_IDS', '400'))
+
+
+def load_dedupe_cache() -> Dict[str, List[str]]:
+    """Load deduplication cache from disk."""
+    cache_file = Path(DEDUPE_CACHE_PATH)
+    if not cache_file.exists():
+        return {"reddit": [], "x": []}
+    try:
+        with cache_file.open('r') as f:
+            data = json.load(f)
+            return {
+                "reddit": data.get("reddit", []),
+                "x": data.get("x", [])
+            }
+    except (json.JSONDecodeError, OSError):
+        return {"reddit": [], "x": []}
+
+
+def save_dedupe_cache(cache: Dict[str, List[str]]) -> None:
+    """Persist deduplication cache."""
+    cache_file = Path(DEDUPE_CACHE_PATH)
+    serializable = {
+        "reddit": cache.get("reddit", [])[:MAX_DEDUPE_IDS],
+        "x": cache.get("x", [])[:MAX_DEDUPE_IDS]
+    }
+    try:
+        with cache_file.open('w') as f:
+            json.dump(serializable, f, indent=2)
+    except OSError as exc:
+        print(f"Warning: unable to save dedupe cache: {exc}")
+
+
+def merge_dedupe_ids(cache: Dict[str, List[str]], source: str, new_ids: List[str]) -> None:
+    """Merge newly seen IDs into cache while enforcing uniqueness and length."""
+    existing = cache.get(source, [])
+    combined = [lead_id for lead_id in new_ids if lead_id] + existing
+    seen = set()
+    trimmed: List[str] = []
+    for lead_id in combined:
+        if lead_id not in seen:
+            seen.add(lead_id)
+            trimmed.append(lead_id)
+        if len(trimmed) >= MAX_DEDUPE_IDS:
+            break
+    cache[source] = trimmed
+
 
 class LeadClassifier:
     """Utility class to classify lead intent text."""
@@ -165,13 +215,18 @@ class XLeadFinder:
         self.session.headers.update({
             "Authorization": f"Bearer {self.bearer_token}"
         })
+        self.rate_snapshot: Dict[str, Dict[str, Optional[int]]] = {}
+        self.context_fetch_limit = int(os.getenv('X_CONTEXT_FETCH_LIMIT', '5'))
+        self._conversation_cache: Dict[str, List[Dict]] = {}
 
     def search_x(self, keywords: Optional[List[str]] = None, date_range_days: int = 7,
-                 limit: int = 50, include_replies: bool = False) -> List[Dict]:
+                 limit: int = 50, include_replies: bool = False,
+                 min_followers: int = 0, min_engagement: int = 0) -> List[Dict]:
         """Search X (Twitter) for relevant tweets."""
         search_keywords = keywords or self.keywords
         if not search_keywords:
             return []
+        self.rate_snapshot = {}
 
         # Build X query (top 5 keywords to stay within query length limits)
         keyword_query = " OR ".join([f'("{kw}")' for kw in search_keywords[:5]])
@@ -205,6 +260,7 @@ class XLeadFinder:
                 timeout=15
             )
             response.raise_for_status()
+            self._record_rate_info(response.headers, label="search")
         except requests.HTTPError as http_err:
             raise RuntimeError(f"X API returned error: {http_err.response.text}") from http_err
         except requests.RequestException as req_err:
@@ -216,6 +272,7 @@ class XLeadFinder:
 
         results: List[Dict] = []
         seen_conversations = set()
+        context_calls = 0
         for tweet in tweets:
             convo_id = tweet.get("conversation_id")
             if convo_id and convo_id in seen_conversations:
@@ -227,6 +284,7 @@ class XLeadFinder:
             username = author.get("username", "unknown")
             display_name = author.get("name") or username
             metrics = tweet.get("public_metrics", {})
+            followers = author.get("public_metrics", {}).get("followers_count", 0)
 
             score = (
                 metrics.get("like_count", 0)
@@ -234,6 +292,17 @@ class XLeadFinder:
                 + metrics.get("reply_count", 0)
                 + metrics.get("quote_count", 0)
             )
+
+            if followers < min_followers or score < min_engagement:
+                continue
+
+            context_snippets: List[Dict[str, str]] = []
+            if convo_id:
+                if convo_id in self._conversation_cache:
+                    context_snippets = self._conversation_cache[convo_id]
+                elif context_calls < self.context_fetch_limit:
+                    context_snippets = self._fetch_conversation_context(convo_id)
+                    context_calls += 1
 
             result = {
                 'type': 'tweet',
@@ -245,17 +314,97 @@ class XLeadFinder:
                 'context': tweet.get("text", ""),
                 'author': f"@{username}",
                 'author_name': display_name,
+                'followers': followers,
                 'score': score,
                 'created_utc': tweet.get("created_at", ""),
                 'intent_label': LeadClassifier.classify(tweet.get("text", "")),
                 'include_link': True,
-                'metrics': metrics
+                'metrics': metrics,
+                'conversation_context': context_snippets
             }
 
             results.append(result)
 
         results.sort(key=lambda x: x['score'], reverse=True)
         return results[:min(limit, self.max_results)]
+
+    def _record_rate_info(self, headers: Dict[str, str], label: str = "search") -> Dict[str, Optional[int]]:
+        """Capture rate limit snapshot from X headers."""
+        def safe_int(value: Optional[str]) -> Optional[int]:
+            try:
+                return int(value) if value is not None else None
+            except (TypeError, ValueError):
+                return None
+
+        timestamp = int(time.time())
+        info = {
+            "label": label,
+            "limit": safe_int(headers.get("x-rate-limit-limit")),
+            "remaining": safe_int(headers.get("x-rate-limit-remaining")),
+            "reset_epoch": safe_int(headers.get("x-rate-limit-reset")),
+            "captured_at": timestamp
+        }
+        if info["reset_epoch"]:
+            info["resets_in"] = max(info["reset_epoch"] - timestamp, 0)
+
+        if label == "context":
+            existing = self.rate_snapshot.get("context_calls", [])
+            existing = existing[:] if isinstance(existing, list) else []
+            existing.append(info)
+            self.rate_snapshot["context_calls"] = existing
+        else:
+            self.rate_snapshot[label] = info
+        return info
+
+    def _fetch_conversation_context(self, conversation_id: str) -> List[Dict[str, str]]:
+        """Fetch a few recent replies for context without overusing rate limits."""
+        if not conversation_id:
+            return []
+        if conversation_id in self._conversation_cache:
+            return self._conversation_cache[conversation_id]
+
+        params = {
+            "query": f"conversation_id:{conversation_id} is:reply",
+            "max_results": 5,
+            "tweet.fields": "author_id,created_at,public_metrics,text",
+            "user.fields": "username,name",
+            "expansions": "author_id"
+        }
+
+        try:
+            response = self.session.get(
+                "https://api.twitter.com/2/tweets/search/recent",
+                params=params,
+                timeout=10
+            )
+            response.raise_for_status()
+            self._record_rate_info(response.headers, label="context")
+        except requests.HTTPError as http_err:
+            print(f"Context fetch failed for conversation {conversation_id}: {http_err.response.text}")
+            self._conversation_cache[conversation_id] = []
+            return []
+        except requests.RequestException as req_err:
+            print(f"Context fetch failed for conversation {conversation_id}: {req_err}")
+            self._conversation_cache[conversation_id] = []
+            return []
+
+        data = response.json()
+        replies = data.get("data", [])
+        users = {user["id"]: user for user in data.get("includes", {}).get("users", [])}
+
+        snippets: List[Dict[str, str]] = []
+        for reply in replies:
+            author = users.get(reply.get("author_id", ""), {})
+            username = author.get("username", "unknown")
+            snippet = {
+                "author": f"@{username}",
+                "text": reply.get("text", "")[:280],
+                "created_at": reply.get("created_at", "")
+            }
+            snippets.append(snippet)
+
+        self._conversation_cache[conversation_id] = snippets
+        return snippets
 
 
 if __name__ == "__main__":

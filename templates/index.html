@@ -240,6 +240,71 @@
             accent-color: white;
         }
 
+        .voice-presets {
+            margin: 20px 0;
+        }
+
+        .voice-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .voice-card {
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 16px;
+            background: #f8f9fa;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .voice-card.active {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .voice-card-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .voice-card-desc {
+            font-size: 13px;
+            opacity: 0.85;
+        }
+
+        .voice-custom {
+            margin-top: 15px;
+            display: grid;
+            gap: 10px;
+        }
+
+        .voice-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+        }
+
+        .voice-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .voice-actions input {
+            flex: 1;
+            min-width: 160px;
+            padding: 10px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+        }
+
         .checkbox-wrapper {
             display: flex;
             align-items: center;
@@ -380,6 +445,36 @@
             margin-top: 15px;
         }
 
+        .advanced-settings {
+            margin: 20px 0;
+        }
+
+        .advanced-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .advanced-grid .helper-text {
+            margin-top: 6px;
+            font-size: 12px;
+            color: #888;
+        }
+
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 6px;
+        }
+
+        .toggle-row input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
         .filter-group {
             display: flex;
             flex-direction: column;
@@ -486,6 +581,44 @@
             display: none;
         }
 
+        .rate-info {
+            margin-bottom: 20px;
+            padding: 16px;
+            border-radius: 12px;
+            background: rgba(102, 126, 234, 0.08);
+            color: #2f365f;
+            display: none;
+        }
+
+        .rate-info.active {
+            display: block;
+        }
+
+        .rate-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+        }
+
+        .rate-card {
+            background: white;
+            border-radius: 10px;
+            padding: 12px;
+            border: 1px solid rgba(102, 126, 234, 0.25);
+        }
+
+        .rate-card h4 {
+            margin-bottom: 6px;
+            font-size: 14px;
+            color: #4b5563;
+        }
+
+        .rate-card p {
+            margin: 2px 0;
+            font-size: 12px;
+            color: #555;
+        }
+
         .stats {
             display: flex;
             gap: 20px;
@@ -576,6 +709,30 @@
             color: #999;
             margin-bottom: 15px;
             flex-wrap: wrap;
+        }
+
+        .context-block {
+            margin-top: 12px;
+            padding: 12px;
+            background: #eef2ff;
+            border-radius: 10px;
+        }
+
+        .context-title {
+            font-weight: 600;
+            font-size: 13px;
+            margin-bottom: 6px;
+            color: #4c51bf;
+        }
+
+        .context-item {
+            font-size: 13px;
+            color: #444;
+            margin-bottom: 6px;
+        }
+
+        .context-item span {
+            font-weight: 600;
         }
 
         .result-actions {
@@ -823,6 +980,25 @@
                 <div class="helper-text">Select one or both platforms. Reddit scans posts and comments (when enabled).</div>
             </div>
 
+            <div class="voice-presets">
+                <div class="section-title">🗣️ Voice Presets</div>
+                <div class="voice-grid" id="voicePresetGrid"></div>
+                <div class="voice-custom">
+                    <textarea
+                        id="customVoiceInput"
+                        class="voice-input"
+                        rows="3"
+                        placeholder="Describe your voice (e.g., upbeat pro with quick slang and lots of energy)"
+                    ></textarea>
+                    <div class="voice-actions">
+                        <input type="text" id="customVoiceName" placeholder="Preset name (e.g., Chill Trader)">
+                        <button class="btn btn-secondary" onclick="saveCustomVoicePreset()">💾 Save Voice Preset</button>
+                        <button class="btn btn-danger" onclick="resetVoicePresets()">♻️ Reset Voices</button>
+                    </div>
+                </div>
+                <div class="helper-text">Saved presets stay in your browser. Keep descriptions free of hyphen characters for best results.</div>
+            </div>
+
             <div class="checkbox-wrapper">
                 <input type="checkbox" id="searchComments" checked>
                 <label for="searchComments">Also search comments (2x more opportunities)</label>
@@ -882,6 +1058,30 @@
                 </div>
             </div>
 
+            <div class="advanced-settings">
+                <div class="section-title">🛠️ Advanced Settings</div>
+                <div class="advanced-grid">
+                    <div class="filter-group">
+                        <label for="minFollowers">Min X Followers</label>
+                        <input type="number" id="minFollowers" min="0" placeholder="e.g., 500">
+                        <div class="helper-text">Only surface tweets from accounts at or above this follower count.</div>
+                    </div>
+                    <div class="filter-group">
+                        <label for="minEngagement">Min X Engagement</label>
+                        <input type="number" id="minEngagement" min="0" placeholder="e.g., 20">
+                        <div class="helper-text">Score equals likes + replies + quotes + two times retweets.</div>
+                    </div>
+                    <div class="filter-group">
+                        <label for="dedupeToggle">Lead Memory</label>
+                        <div class="toggle-row">
+                            <input type="checkbox" id="dedupeToggle" checked>
+                            <span>Skip leads seen in previous scans</span>
+                        </div>
+                        <div class="helper-text">Uncheck if you want to rescan every conversation.</div>
+                    </div>
+                </div>
+            </div>
+
             <div class="smart-filters">
                 <div class="section-title">🔍 Smart Filters</div>
                 <div class="filters-grid">
@@ -931,6 +1131,7 @@
             <div class="section-title">Results</div>
             <div class="stats" id="stats"></div>
             <div class="scan-warnings" id="scanWarnings"></div>
+            <div class="rate-info" id="rateInfo"></div>
             <div id="resultsList"></div>
         </div>
     </div>
@@ -941,6 +1142,155 @@
         let currentResults = [];
         let originalResults = [];
         let lastScanErrors = null;
+        let lastRateLimits = null;
+        const VOICE_STORAGE_KEY = 'voice-presets-v2';
+        const defaultVoicePresets = [
+            {
+                id: 'balanced-pro',
+                name: 'Balanced Pro',
+                instructions: 'Sound like a confident trader with skin in the game. Mix calm explanations with quick slang when it fits.'
+            },
+            {
+                id: 'no-fluff',
+                name: 'No Fluff',
+                instructions: 'Keep sentences tight, lead with the takeaway, and sprinkle imo or fwiw where it fits.'
+            },
+            {
+                id: 'mentor-energy',
+                name: 'Mentor Energy',
+                instructions: 'Warm and encouraging, share a quick personal win, close with a push to stay disciplined.'
+            }
+        ];
+        let voicePresets = [];
+        let selectedVoicePresetId = 'balanced-pro';
+
+        function escapeHtml(text) {
+            if (typeof text !== 'string') return '';
+            return text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function formatSeconds(seconds) {
+            if (!seconds || seconds < 0) return 'soon';
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            if (mins > 60) {
+                const hours = Math.floor(mins / 60);
+                const remainingMins = mins % 60;
+                return `${hours}h ${remainingMins}m`;
+            }
+            if (mins > 0) {
+                return `${mins}m ${secs.toString().padStart(2, '0')}s`;
+            }
+            return `${secs}s`;
+        }
+
+        function loadStoredVoicePresets() {
+            try {
+                const stored = localStorage.getItem(VOICE_STORAGE_KEY);
+                if (!stored) return [];
+                const parsed = JSON.parse(stored);
+                if (Array.isArray(parsed)) {
+                    return parsed.filter(preset => preset && preset.name && preset.instructions);
+                }
+            } catch (error) {
+                console.error('Error loading voice presets:', error);
+            }
+            return [];
+        }
+
+        function persistVoicePresets(presets) {
+            try {
+                localStorage.setItem(VOICE_STORAGE_KEY, JSON.stringify(presets));
+            } catch (error) {
+                console.error('Error saving voice presets:', error);
+            }
+        }
+
+        function initVoicePresets() {
+            const stored = loadStoredVoicePresets();
+            voicePresets = [...defaultVoicePresets, ...stored];
+            if (!voicePresets.find(preset => preset.id === selectedVoicePresetId)) {
+                selectedVoicePresetId = voicePresets[0] ? voicePresets[0].id : '';
+            }
+            renderVoicePresets();
+        }
+
+        function renderVoicePresets() {
+            const grid = document.getElementById('voicePresetGrid');
+            if (!grid) return;
+            grid.innerHTML = '';
+
+            voicePresets.forEach(preset => {
+                const card = document.createElement('div');
+                card.className = 'voice-card' + (preset.id === selectedVoicePresetId ? ' active' : '');
+                card.onclick = () => selectVoicePreset(preset.id);
+
+                const title = document.createElement('div');
+                title.className = 'voice-card-title';
+                title.textContent = preset.name;
+
+                const desc = document.createElement('div');
+                desc.className = 'voice-card-desc';
+                desc.textContent = preset.instructions;
+
+                card.appendChild(title);
+                card.appendChild(desc);
+                grid.appendChild(card);
+            });
+        }
+
+        function selectVoicePreset(presetId) {
+            selectedVoicePresetId = presetId;
+            renderVoicePresets();
+        }
+
+        function getSelectedVoicePreset() {
+            return voicePresets.find(preset => preset.id === selectedVoicePresetId) || null;
+        }
+
+        function saveCustomVoicePreset() {
+            const nameInput = document.getElementById('customVoiceName');
+            const descInput = document.getElementById('customVoiceInput');
+            const name = (nameInput.value || '').trim();
+            const description = (descInput.value || '').trim();
+
+            if (!name || !description) {
+                alert('Please provide both a name and description for the voice preset.');
+                return;
+            }
+
+            const sanitizedDescription = description.replace(/[-–—]/g, ' ');
+            const customPreset = {
+                id: `custom-${Date.now()}`,
+                name,
+                instructions: sanitizedDescription
+            };
+
+            const stored = loadStoredVoicePresets();
+            stored.push(customPreset);
+            persistVoicePresets(stored);
+
+            voicePresets = [...defaultVoicePresets, ...stored];
+            selectedVoicePresetId = customPreset.id;
+            renderVoicePresets();
+
+            nameInput.value = '';
+            descInput.value = '';
+            alert('Voice preset saved!');
+        }
+
+        function resetVoicePresets() {
+            persistVoicePresets([]);
+            voicePresets = [...defaultVoicePresets];
+            selectedVoicePresetId = voicePresets[0] ? voicePresets[0].id : '';
+            renderVoicePresets();
+            alert('Voice presets reset to defaults.');
+        }
 
         async function loadDefaultKeywords() {
             try {
@@ -1037,6 +1387,7 @@
                 if (e.key === 'Enter') addCustomKeyword();
             });
 
+            initVoicePresets();
             setupPlatformSelectors();
             loadDefaultKeywords();
         });
@@ -1052,6 +1403,9 @@
                 alert('Please select at least one platform to scan.');
                 return;
             }
+            const minFollowers = parseInt(document.getElementById('minFollowers').value, 10) || 0;
+            const minEngagement = parseInt(document.getElementById('minEngagement').value, 10) || 0;
+            const dedupeEnabled = document.getElementById('dedupeToggle').checked;
 
             btn.disabled = true;
             btn.textContent = '🔍 Scanning...';
@@ -1060,6 +1414,7 @@
             resultsList.innerHTML = '<div class="loading"><div class="spinner"></div>Scanning for new leads...</div>';
             stats.innerHTML = '';
             displayWarnings(null);
+            renderRateInfo(null);
             
             try {
                 const response = await fetch('/api/scan', {
@@ -1069,7 +1424,10 @@
                         keywords: Array.from(selectedKeywords),
                         date_range: parseInt(document.getElementById('dateRange').value),
                         search_comments: document.getElementById('searchComments').checked,
-                        platforms
+                        platforms,
+                        min_followers: minFollowers,
+                        min_engagement: minEngagement,
+                        dedupe: dedupeEnabled
                     })
                 });
                 
@@ -1079,16 +1437,21 @@
                     currentResults = data.results;
                     originalResults = [...data.results]; // Save original results
                     lastScanErrors = data.errors || null;
+                    lastRateLimits = data.rate_limits || null;
                     displayWarnings(lastScanErrors);
+                    renderRateInfo(lastRateLimits);
                     displayResults(data.results);
                 } else {
                     resultsList.innerHTML = `<div class="empty-state">❌ Error: ${data.error}</div>`;
                     lastScanErrors = data.errors || null;
+                    lastRateLimits = data.rate_limits || null;
                     displayWarnings(lastScanErrors);
+                    renderRateInfo(lastRateLimits);
                 }
             } catch (error) {
                 resultsList.innerHTML = `<div class="empty-state">❌ Error: ${error.message}</div>`;
                 displayWarnings(null);
+                renderRateInfo(null);
             } finally {
                 btn.disabled = false;
                 btn.textContent = '🔍 Start Scanning';
@@ -1149,16 +1512,44 @@
                 const type = resolveType(result);
                 const score = Number(result.score) || 0;
                 const scoreClass = score >= 10 ? 'score-high' : score >= 5 ? 'score-medium' : 'score-low';
-                const body = result.body || result.title || '';
-                const displayBody = body.length > 300 ? body.substring(0, 300) + '...' : body;
+                const rawBody = result.body || result.title || '';
+                const bodySnippet = rawBody.length > 300 ? `${rawBody.substring(0, 300)}...` : rawBody;
+                const displayBody = escapeHtml(bodySnippet);
+                const rawTitle = result.title || 'Lead';
+                const safeTitle = escapeHtml(rawTitle);
                 const created = result.created_utc ? new Date(result.created_utc).toLocaleString() : 'Unknown';
-                const location = source === 'x'
+                const locationRaw = source === 'x'
                     ? (result.author || 'Unknown author')
                     : `r/${result.subreddit || 'unknown'}`;
+                const location = escapeHtml(locationRaw);
                 const openLabel = source === 'x' ? '🔗 Open X' : '🔗 Open Reddit';
+                const intentLabel = escapeHtml(result.intent_label || 'General');
                 const metrics = result.metrics || {};
-                const metricsHtml = source === 'x'
-                    ? `<span>❤️ ${metrics.like_count || 0}</span><span>🔁 ${metrics.retweet_count || 0}</span>`
+                const followerCount = Number(result.followers || 0);
+                const followerHtml = source === 'x' && followerCount > 0
+                    ? `<span>👥 ${followerCount.toLocaleString()} followers</span>`
+                    : '';
+                const metricsPieces = [];
+                if (source === 'x') {
+                    metricsPieces.push(`<span>❤️ ${metrics.like_count || 0}</span>`);
+                    metricsPieces.push(`<span>🔁 ${metrics.retweet_count || 0}</span>`);
+                    metricsPieces.push(`<span>💬 ${metrics.reply_count || 0}</span>`);
+                }
+                const metricsHtml = metricsPieces.join('');
+                const metaPieces = [
+                    `<span>${source === 'x' ? '🐦' : '📍'} ${location}</span>`,
+                    `<span>⏰ ${escapeHtml(created)}</span>`,
+                    `<span>🏷️ ${intentLabel}</span>`
+                ];
+                if (followerHtml) metaPieces.push(followerHtml);
+                if (metricsHtml) metaPieces.push(metricsHtml);
+
+                const contextItems = Array.isArray(result.conversation_context) ? result.conversation_context : [];
+                const contextHtml = contextItems.length
+                    ? `<div class="context-block">
+                            <div class="context-title">Fresh replies in this thread</div>
+                            ${contextItems.map(item => `<div class="context-item"><span>${escapeHtml(item.author || 'unknown')}</span>: ${escapeHtml(item.text || '')}</div>`).join('')}
+                       </div>`
                     : '';
 
                 return `
@@ -1167,14 +1558,12 @@
                             <span class="result-type">${type.toUpperCase()} · ${source === 'x' ? 'X' : 'Reddit'}</span>
                             <span class="result-score ${scoreClass}">↑ ${score}</span>
                         </div>
-                        <div class="result-title">${result.title || 'Lead'}</div>
+                        <div class="result-title">${safeTitle}</div>
                         <div class="result-body">${displayBody}</div>
                         <div class="result-meta">
-                            <span>${source === 'x' ? '🐦' : '📍'} ${location}</span>
-                            <span>⏰ ${created}</span>
-                            <span>🏷️ ${result.intent_label || 'General'}</span>
-                            ${metricsHtml}
+                            ${metaPieces.join('')}
                         </div>
+                        ${contextHtml}
                         <div class="result-actions">
                             <button class="btn btn-primary" onclick="generateReply(${index})">
                                 🤖 Generate AI Reply
@@ -1220,6 +1609,64 @@
             warningsDiv.style.display = 'block';
         }
 
+        function renderRateInfo(rateLimits) {
+            const container = document.getElementById('rateInfo');
+            if (!container) return;
+
+            if (!rateLimits || Object.keys(rateLimits).length === 0) {
+                container.classList.remove('active');
+                container.innerHTML = '';
+                return;
+            }
+
+            const nowSeconds = Math.floor(Date.now() / 1000);
+            let html = '<div class="rate-grid">';
+
+            if (rateLimits.reddit) {
+                const rl = rateLimits.reddit;
+                const resetSeconds = rl.reset_timestamp ? Math.max(0, Math.round(rl.reset_timestamp - nowSeconds)) : null;
+                html += `
+                    <div class="rate-card">
+                        <h4>Reddit API</h4>
+                        <p>Remaining: ${rl.remaining ?? 'n/a'}</p>
+                        <p>Used: ${rl.used ?? 'n/a'}</p>
+                        <p>Resets in: ${resetSeconds !== null ? formatSeconds(resetSeconds) : 'unknown'}</p>
+                    </div>
+                `;
+            }
+
+            if (rateLimits.x) {
+                const search = rateLimits.x.search || {};
+                const contextCalls = Array.isArray(rateLimits.x.context_calls) ? rateLimits.x.context_calls : [];
+                const resetSeconds = search.reset_epoch ? Math.max(0, search.reset_epoch - nowSeconds) : null;
+
+                html += `
+                    <div class="rate-card">
+                        <h4>X Recent Search</h4>
+                        <p>Remaining: ${search.remaining ?? 'n/a'} / ${search.limit ?? 'n/a'}</p>
+                        <p>Resets in: ${resetSeconds !== null ? formatSeconds(resetSeconds) : 'unknown'}</p>
+                    </div>
+                `;
+
+                if (contextCalls.length > 0) {
+                    const latest = contextCalls[contextCalls.length - 1] || {};
+                    const contextReset = latest.reset_epoch ? Math.max(0, latest.reset_epoch - nowSeconds) : null;
+                    html += `
+                        <div class="rate-card">
+                            <h4>X Context Lookups</h4>
+                            <p>Calls this scan: ${contextCalls.length}</p>
+                            <p>Latest remaining: ${latest.remaining ?? 'n/a'} / ${latest.limit ?? 'n/a'}</p>
+                            <p>Resets in: ${contextReset !== null ? formatSeconds(contextReset) : 'unknown'}</p>
+                        </div>
+                    `;
+                }
+            }
+
+            html += '</div>';
+            container.innerHTML = html;
+            container.classList.add('active');
+        }
+
         async function generateReply(index) {
             const result = currentResults[index];
             const replyDiv = document.getElementById(`reply-${index}`);
@@ -1228,6 +1675,12 @@
             // Get selected reply mode and length
             const replyMode = document.querySelector('input[name="replyMode"]:checked').value;
             const replyLength = document.querySelector('input[name="replyLength"]:checked').value;
+            const voicePreset = getSelectedVoicePreset();
+            const voicePayload = voicePreset ? {
+                id: voicePreset.id,
+                name: voicePreset.name,
+                instructions: (voicePreset.instructions || '').replace(/[-–—]/g, ' ')
+            } : null;
             
             variantsContainer.innerHTML = '<div class="loading"><div class="spinner"></div>Generating AI reply variants...</div>';
             replyDiv.classList.add('show');
@@ -1241,7 +1694,8 @@
                         intent_label: result.intent_label || 'General discussion',
                         reply_mode: replyMode,
                         reply_length: replyLength,
-                        type: result.type || 'post'
+                        type: result.type || 'post',
+                        voice_profile: voicePayload
                     })
                 });
                 
@@ -1347,6 +1801,7 @@
                     currentResults = data.results;
                     displayResults(data.results);
                     displayWarnings(lastScanErrors);
+                    renderRateInfo(lastRateLimits);
                 } else {
                     alert(`Error filtering results: ${data.error}`);
                 }
@@ -1366,6 +1821,7 @@
                 currentResults = [...originalResults];
                 displayResults(originalResults);
                 displayWarnings(lastScanErrors);
+                renderRateInfo(lastRateLimits);
             }
         }
 
