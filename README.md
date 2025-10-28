@@ -1,11 +1,12 @@
-# Reddit Lead Finder v2.0 - Web Application 🚀
+# Social Lead Finder v2.0 - Web Application 🚀
 
-An intelligent web-based tool for finding and engaging with trading communities on Reddit. Built for TradingWizard.ai.
+An intelligent web-based tool for finding and engaging with trading communities on Reddit and X (Twitter). Built for TradingWizard.ai.
 
 ## 🆕 What's New in v2.0
 
 ### Major Features
 - ✅ **Comment Search** - Now searches both posts AND comments
+- ✅ **X Lead Search** - Tap into live conversations on X (Twitter)
 - ✅ **Web UI** - Beautiful, modern interface
 - ✅ **AI Reply Generation** - Generate natural, helpful replies with Claude AI
 - ✅ **Keyword Selection** - Choose which keywords to search
@@ -23,7 +24,7 @@ TradingWizard.ai features:
 ## 🎯 Features
 
 ### Search Capabilities
-- Search both **posts** and **comments**
+- Search **Reddit posts/comments** and **X tweets**
 - Multiple trading subreddits (algotrading, trading, daytrading, stocks, forex, crypto, etc.)
 - Customizable keyword selection
 - Adjustable date range (1-30 days)
@@ -94,6 +95,7 @@ TradingWizard.ai features:
    In Railway dashboard, add these variables:
    - `REDDIT_CLIENT_ID` - Your Reddit app client ID
    - `REDDIT_CLIENT_SECRET` - Your Reddit app secret
+   - `X_BEARER_TOKEN` - Your X (Twitter) API bearer token (or use `TWITTER_BEARER_TOKEN`)
    - `ANTHROPIC_API_KEY` - Your Anthropic API key (optional)
    - `REDDIT_USER_AGENT` - `TradingWizard Lead Finder v2.0`
 
@@ -122,6 +124,13 @@ TradingWizard.ai features:
    - Redirect URI: `http://localhost:8080`
 4. Copy your `client_id` and `client_secret`
 
+### X (Twitter) API
+
+1. Apply for X API access at https://developer.twitter.com/
+2. Create a Project + App, then generate a **Bearer Token** for the v2 API
+3. Copy the token and set it as `X_BEARER_TOKEN` (or `TWITTER_BEARER_TOKEN`)
+4. Ensure your app has access to the recent search endpoint
+
 ### Anthropic API (Optional)
 
 1. Go to https://console.anthropic.com/
@@ -134,7 +143,8 @@ TradingWizard.ai features:
 
 ## 📖 How to Use
 
-### 1. Select Keywords
+### 1. Select Platforms & Keywords
+- Choose Reddit and/or X using the platform toggles
 - Click on keyword tags to toggle selection
 - Selected keywords are highlighted in purple
 - Default keywords are optimized for TradingWizard.ai
@@ -148,12 +158,12 @@ TradingWizard.ai features:
 - Wait for results (usually 10-30 seconds)
 
 ### 4. Review Results
-- See statistics: total leads, posts, comments, avg score
+- See statistics: total leads, Reddit vs X breakdown, average score
 - Each lead shows:
   - Title and content
   - Relevance score
   - Intent label
-  - Subreddit and metadata
+  - Source metadata (subreddit or X handle)
   - Risk flags (if any)
 
 ### 5. Generate AI Reply
@@ -164,7 +174,7 @@ TradingWizard.ai features:
 
 ### 6. Copy and Post
 - Click "📋 Copy Reply" to copy to clipboard
-- Click "🔗 Open in Reddit" to visit the post
+- Click "🔗 Open" to visit the post/tweet on the source platform
 - Paste your reply and engage!
 
 ## 🎨 UI Features
@@ -176,7 +186,7 @@ TradingWizard.ai features:
 
 ### Lead Cards
 - Color-coded relevance scores
-- Type badges (post/comment)
+- Type badges (post/comment/tweet)
 - Intent labels (tool-seeking, how-to, etc.)
 - Risk warnings
 
@@ -187,7 +197,7 @@ TradingWizard.ai features:
 
 ### Statistics Dashboard
 - Total leads found
-- Posts vs comments breakdown
+- Reddit vs X breakdown (posts, comments, tweets)
 - Average relevance score
 
 ## ⚙️ Configuration

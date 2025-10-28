@@ -4,7 +4,7 @@ Flask Web Application for Reddit Lead Finder
 
 from flask import Flask, render_template, jsonify, request
 from dotenv import load_dotenv
-from main import RedditLeadFinder
+from main import RedditLeadFinder, XLeadFinder
 import os
 
 # Load environment variables
@@ -14,6 +14,8 @@ app = Flask(__name__)
 
 # Global variable for lead finder instance
 lead_finder = None
+x_lead_finder = None
+x_lead_finder_error = None
 
 def get_anthropic_client():
     """Initialize Anthropic client lazily only when needed."""
@@ -36,6 +38,19 @@ def get_lead_finder():
         lead_finder = RedditLeadFinder()
     return lead_finder
 
+def get_x_lead_finder():
+    """Get or create XLeadFinder instance."""
+    global x_lead_finder, x_lead_finder_error
+    if x_lead_finder is None:
+        try:
+            x_lead_finder = XLeadFinder()
+            x_lead_finder_error = None
+        except Exception as exc:
+            x_lead_finder_error = str(exc)
+            print(f"Warning: X lead finder unavailable - {exc}")
+            return None
+    return x_lead_finder
+
 @app.route('/') 
 def index():
     """Render the main page."""
@@ -47,36 +62,81 @@ def health():
     return jsonify({'status': 'healthy'}), 200
 
 @app.route('/api/scan', methods=['POST'])
-def scan_reddit():
-    """Scan Reddit for leads."""
+def scan_leads():
+    """Scan selected social platforms for leads."""
     try:
         data = request.json
         keywords = data.get('keywords', [])
         date_range = data.get('date_range', 7)
         search_comments = data.get('search_comments', True)
+        platforms = data.get('platforms') or ['reddit']
         
-        print(f"Scanning with {len(keywords)} keywords")
+        print(f"Scanning with {len(keywords)} keywords across platforms: {platforms}")
         
         finder = get_lead_finder()
+        combined_results = []
+        errors = {}
+        max_results = finder.config.get('max_results', 50)
         
         # Use custom keywords if provided, otherwise use defaults
-        results = finder.search_reddit(
-            keywords=keywords if keywords else None,
-            date_range_days=date_range,
-            limit=50,
-            search_comments=search_comments
-        )
-        
-        print(f"Found {len(results)} results")
-        
-        return jsonify({
+        custom_keywords = keywords if keywords else None
+
+        if 'reddit' in platforms:
+            try:
+                reddit_results = finder.search_reddit(
+                    keywords=custom_keywords,
+                    date_range_days=date_range,
+                    limit=max_results,
+                    search_comments=search_comments
+                )
+                combined_results.extend(reddit_results)
+                print(f"Found {len(reddit_results)} Reddit results")
+            except Exception as reddit_error:
+                errors['reddit'] = str(reddit_error)
+                print(f"Error scanning Reddit: {reddit_error}")
+
+        if 'x' in platforms:
+            x_finder = get_x_lead_finder()
+            if not x_finder:
+                errors['x'] = x_lead_finder_error or 'X integration not configured'
+                print(f"Skipping X scan: {errors['x']}")
+            else:
+                try:
+                    x_results = x_finder.search_x(
+                        keywords=custom_keywords,
+                        date_range_days=date_range,
+                        limit=max_results
+                    )
+                    combined_results.extend(x_results)
+                    print(f"Found {len(x_results)} X results")
+                except Exception as x_error:
+                    errors['x'] = str(x_error)
+                    print(f"Error scanning X: {x_error}")
+
+        combined_results.sort(key=lambda x: x.get('score', 0), reverse=True)
+        combined_results = combined_results[:max_results]
+
+        if not combined_results and errors:
+            error_messages = '; '.join(f"{platform.upper()}: {message}" for platform, message in errors.items())
+            return jsonify({
+                'success': False,
+                'error': error_messages,
+                'errors': errors
+            }), 200
+
+        response = {
             'success': True,
-            'count': len(results),
-            'results': results
-        })
+            'count': len(combined_results),
+            'results': combined_results
+        }
+
+        if errors:
+            response['errors'] = errors
+        
+        return jsonify(response)
     
     except Exception as e:
-        print(f"Error in scan_reddit: {e}")
+        print(f"Error in scan_leads: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({
@@ -361,10 +421,12 @@ def save_lead():
         data = request.json
         lead_id = data.get('lead_id')
         status = data.get('status', 'saved')  # new, saved, replied, skipped
+        source = data.get('source', 'unknown')
         
         print(f"\n=== Save Lead Request ===")
         print(f"Lead ID: {lead_id}")
         print(f"Status: {status}")
+        print(f"Source: {source}")
         
         # In a real app, you'd save this to a database
         # For now, we'll just return success
