@@ -59,12 +59,39 @@ def scan_leads():
     """Scan selected social platforms for leads."""
     try:
         data = request.json
+        
+        # Validate and sanitize inputs
         keywords = data.get('keywords', [])
-        date_range = int(data.get('date_range', 7))
+        if not keywords:
+            return jsonify({
+                'success': False,
+                'error': 'Please add at least one keyword to search'
+            }), 400
+        
+        # Safe integer conversion with defaults
+        try:
+            date_range = int(data.get('date_range', 7)) if data.get('date_range') else 7
+        except (ValueError, TypeError):
+            date_range = 7
+            
+        try:
+            min_followers = int(data.get('min_followers', 0)) if data.get('min_followers') else 0
+        except (ValueError, TypeError):
+            min_followers = 0
+            
+        try:
+            min_engagement = int(data.get('min_engagement', 0)) if data.get('min_engagement') else 0
+        except (ValueError, TypeError):
+            min_engagement = 0
+        
         search_comments = data.get('search_comments', True)
         platforms = data.get('platforms') or ['reddit']
-        min_followers = int(data.get('min_followers', 0))
-        min_engagement = int(data.get('min_engagement', 0))
+        
+        if not platforms:
+            return jsonify({
+                'success': False,
+                'error': 'Please select at least one platform (Reddit or X)'
+            }), 400
         
         print(f"Scanning with {len(keywords)} keywords across platforms: {platforms}")
         
@@ -85,7 +112,8 @@ def scan_leads():
                 combined_results.extend(results)
                 print(f"Found {len(results)} Reddit results")
             except Exception as e:
-                errors['reddit'] = str(e)
+                error_msg = str(e)
+                errors['reddit'] = f"Reddit scan failed: {error_msg}"
                 print(f"Error scanning Reddit: {e}")
 
         # X Scan
@@ -105,25 +133,52 @@ def scan_leads():
                     if finder.rate_snapshot:
                         rate_limits['x'] = finder.rate_snapshot
                 else:
-                    errors['x'] = x_finder_error or "X configuration missing"
+                    errors['x'] = x_finder_error or "X API credentials not configured. Add X_BEARER_TOKEN to .env"
             except Exception as e:
-                errors['x'] = str(e)
+                error_msg = str(e)
+                errors['x'] = f"X scan failed: {error_msg}"
                 print(f"Error scanning X: {e}")
 
         # Sort and limit
         combined_results.sort(key=lambda x: x.get('score', 0), reverse=True)
+        
+        # Better error messaging when no results found
+        if not combined_results:
+            error_summary = []
+            if errors:
+                for platform, msg in errors.items():
+                    error_summary.append(f"{platform.upper()}: {msg}")
+            
+            if error_summary:
+                return jsonify({
+                    'success': False,
+                    'error': 'Scan completed with errors. ' + '; '.join(error_summary),
+                    'errors': errors
+                }), 200
+            else:
+                return jsonify({
+                    'success': True,
+                    'count': 0,
+                    'results': [],
+                    'message': f"No leads found for keywords: {', '.join(keywords)}. Try different keywords or expand date range."
+                })
         
         return jsonify({
             'success': True,
             'count': len(combined_results),
             'results': combined_results,
             'rate_limits': rate_limits,
-            'errors': errors
+            'errors': errors if errors else None
         })
     
     except Exception as e:
         print(f"Error in scan_leads: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': f'Unexpected error: {str(e)}. Please check your inputs and try again.'
+        }), 500
 
 @app.route('/api/generate-reply', methods=['POST'])
 def generate_reply():

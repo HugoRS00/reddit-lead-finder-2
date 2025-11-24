@@ -88,15 +88,20 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        if (state.platforms.length === 0) {
+            alert('Please select at least one platform (Reddit or X)');
+            return;
+        }
+
         setLoading(true);
         resultsContainer.innerHTML = '';
 
         const payload = {
             keywords: state.keywords,
             platforms: state.platforms,
-            date_range: document.getElementById('dateRange').value,
-            min_followers: document.getElementById('minFollowers').value,
-            min_engagement: document.getElementById('minEngagement').value
+            date_range: document.getElementById('dateRange').value || '7',
+            min_followers: document.getElementById('minFollowers').value || '0',
+            min_engagement: document.getElementById('minEngagement').value || '0'
         };
 
         try {
@@ -110,14 +115,51 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (data.success) {
                 state.results = data.results;
-                renderResults(data.results);
-                updateStats(data.count);
+
+                if (data.results.length === 0) {
+                    const message = data.message || 'No leads found. Try different keywords or expand date range.';
+                    resultsContainer.innerHTML = `
+                        <div style="text-align:center; padding: 2rem; color: var(--text-muted); border: 2px dashed var(--border); border-radius: 1rem;">
+                            <h3 style="color: var(--warning); margin-bottom: 1rem;">⚠️ No Results</h3>
+                            <p>${message}</p>
+                            ${data.errors ? `<p style="margin-top: 1rem; color: var(--danger); font-size: 0.9rem;">Errors: ${Object.values(data.errors).join(', ')}</p>` : ''}
+                        </div>
+                    `;
+                } else {
+                    renderResults(data.results);
+                    updateStats(data.count);
+
+                    // Show warnings if any platform had errors
+                    if (data.errors && Object.keys(data.errors).length > 0) {
+                        const errorMsg = Object.entries(data.errors)
+                            .map(([platform, msg]) => `${platform.toUpperCase()}: ${msg}`)
+                            .join('<br>');
+                        resultsContainer.insertAdjacentHTML('afterbegin', `
+                            <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid var(--danger); border-radius: 0.5rem; padding: 1rem; margin-bottom: 1rem; color: var(--danger);">
+                                <strong>⚠️ Partial Results:</strong><br>${errorMsg}
+                            </div>
+                        `);
+                    }
+                }
             } else {
-                alert('Scan failed: ' + (data.error || 'Unknown error'));
+                const errorMsg = data.error || 'Unknown error occurred';
+                resultsContainer.innerHTML = `
+                    <div style="text-align:center; padding: 2rem; color: var(--danger); border: 2px solid var(--danger); border-radius: 1rem;">
+                        <h3 style="margin-bottom: 1rem;">❌ Scan Failed</h3>
+                        <p>${errorMsg}</p>
+                        ${data.errors ? `<p style="margin-top: 1rem; font-size: 0.9rem;">Details: ${JSON.stringify(data.errors, null, 2)}</p>` : ''}
+                    </div>
+                `;
             }
         } catch (e) {
             console.error(e);
-            alert('Scan error');
+            resultsContainer.innerHTML = `
+                <div style="text-align:center; padding: 2rem; color: var(--danger); border: 2px solid var(--danger); border-radius: 1rem;">
+                    <h3 style="margin-bottom: 1rem;">❌ Network Error</h3>
+                    <p>Failed to connect to the server. Please check if the app is running.</p>
+                    <p style="margin-top: 1rem; font-size: 0.9rem; color: var(--text-muted);">${e.message}</p>
+                </div>
+            `;
         } finally {
             setLoading(false);
         }
